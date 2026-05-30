@@ -1,0 +1,49 @@
+Id,StateId,State,TicketLength,TicketId_start,TicketId_length,PackNo_start,PackNo_length,PackPos_start,PackPos_length
+1,2,Georgia,24,0,4,4,7,11,3
+2,3,Florida,24,0,4,4,7,11,3
+3,3,Florida,22,0,3,3,6,9,3
+4,4,South Carolina,14,0,4,4,6,10,3
+5,4,South Carolina,24,0,4,4,7,10,3
+6,4,South Carolina,22,0,3,3,6,9,3
+7,5,Tennessee,14,0,4,4,6,10,3
+8,5,Tennessee,24,0,4,4,7,11,3
+9,5,Tennessee,22,0,3,3,6,9,3
+10,6,New Jersey,24,0,5,5,6,11,3
+11,7,Kentucky,24,0,3,4,6,10,3
+12,8,Illinois,20,0,3,3,6,9,3
+13,8,Illinois,16,0,4,4,7,11,3
+14,9,North Carolina,20,0,3,3,6,9,3
+15,10,Ohio,18,0,3,3,6,9,3
+16,12,Massachusetts,29,0,3,4,6,10,3
+17,14,Virginia,24,0,4,4,6,10,3
+18,14,Virginia,14,0,4,4,6,10,3
+19,15,Pennsylvania,16,0,4,4,7,11,3
+20,15,Pennsylvania,14,0,3,3,6,9,3
+21,16,Delaware,14,0,3,3,5,9,3
+22,17,California,26,0,4,4,7,11,3
+23,17,California,24,0,3,3,6,9,3
+24,18,Michigan,18,0,4,4,6,10,3
+25,19,Texas,14,0,4,4,7,11,3
+26,21,Maryland,20,0,3,3,6,9,3
+27,22,Indiana,14,0,4,4,6,10,3
+28,22,Indiana,24,0,4,4,7,11,3
+29,22,Indiana,22,0,3,3,6,9,3
+30,24,Missouri,14,0,3,3,6,9,3
+31,24,Missouri,22,0,3,3,6,9,3
+32,25,Connecticut,20,0,4,4,6,10,3
+33,26,Rhode Island,20,0,3,3,6,9,3
+34,27,Mississippi,14,0,4,4,6,10,3
+35,27,Mississippi,24,0,4,4,7,10,3
+36,27,Mississippi,22,0,3,3,6,9,3
+37,28,Iowa,20,0,3,3,6,9,3
+38,29,Oregon,24,0,5,5,6,11,3
+39,11,New York,24,0,4,4,7,11,3
+40,11,New York,22,0,3,3,6,9,3
+41,13,Wisconsin,22,0,3,3,6,9,3
+42,13,Wisconsin,24,0,4,4,7,11,3
+43,30,Arkansas,24,0,4,4,7,11,3
+44,30,Arkansas,22,0,3,3,6,9,3
+45,31,New Hampshire,22,0,3,3,6,9,3
+46,31,New Hampshire,24,0,4,4,7,11,3
+47,32,Kansas,20,0,3,3,6,16,3
+48,26,Rhode Island,14,0,4,4,6,10,3

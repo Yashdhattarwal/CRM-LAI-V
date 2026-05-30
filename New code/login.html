@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | RTN LAI 5 - Lottery Management Software</title>
+    <meta name="description" content="Sign in to your LAI 5 lottery management dashboard.">
+    <link rel="stylesheet" href="./css/global.css">
+    <script src="./js/theme.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            background: #0d0d14;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        @media (max-width: 768px) {
+            body { grid-template-columns: 1fr; }
+            .hero-panel { display: none; }
+        }
+
+        /* ===================== LEFT HERO PANEL ===================== */
+        .hero-panel {
+            position: relative;
+            background: #0d0d14;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 3rem;
+        }
+        .hero-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 100% 80% at 20% 20%, rgba(110, 50, 200, 0.6) 0%, transparent 65%),
+                radial-gradient(ellipse 70% 60% at 80% 70%, rgba(180, 70, 120, 0.4) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at 50% 50%, rgba(60, 70, 200, 0.3) 0%, transparent 70%);
+        }
+        .hero-panel > * { position: relative; z-index: 1; }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+        .brand-logo svg { width: 40px; height: 40px; }
+        .brand-name {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #fff;
+        }
+        .brand-name span { color: #A78BFA; }
+
+        .hero-content { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 2rem 0; }
+        .hero-content h1 {
+            font-size: clamp(2rem, 3.5vw, 3rem);
+            font-weight: 800;
+            color: #fff;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+        .hero-content h1 span { color: #A78BFA; }
+        .hero-content p {
+            color: rgba(255,255,255,0.65);
+            font-size: 1.05rem;
+            line-height: 1.7;
+            max-width: 380px;
+            margin-bottom: 3rem;
+        }
+        .stat-row {
+            display: flex;
+            gap: 2.5rem;
+            flex-wrap: wrap;
+        }
+        .stat-item .stat-num {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1;
+        }
+        .stat-item .stat-label {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.55);
+            margin-top: 0.25rem;
+        }
+
+        .hero-footer {
+            color: rgba(255,255,255,0.4);
+            font-size: 0.8rem;
+        }
+        .hero-footer a { color: rgba(255,255,255,0.6); text-decoration: none; }
+
+        /* ===================== RIGHT FORM PANEL ===================== */
+        .form-panel {
+            background: #111827;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem 2rem;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        /* Theme toggle — top right */
+        .theme-btn {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 50px;
+            padding: 0.45rem 1rem;
+            color: #fff;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: background 0.2s;
+        }
+        .theme-btn:hover { background: rgba(255,255,255,0.12); }
+        [data-theme='light'] .theme-btn { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.15); color: #111; }
+
+        .form-box {
+            width: 100%;
+            max-width: 420px;
+            animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1);
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-header {
+            margin-bottom: 2.5rem;
+        }
+        .form-header h2 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+        .form-header p { color: #9CA3AF; font-size: 0.95rem; }
+
+        /* Form fields */
+        .field {
+            margin-bottom: 1.25rem;
+        }
+        .field label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #D1D5DB;
+            margin-bottom: 0.5rem;
+        }
+        .field label .req { color: #EF4444; margin-left: 2px; }
+        .field-input {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            background: rgba(255,255,255,0.05);
+            border: 1.5px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+        }
+        .field-input::placeholder { color: #6B7280; }
+        .field-input:focus {
+            border-color: #8B5CF6;
+            background: rgba(139,92,246,0.06);
+            box-shadow: 0 0 0 3px rgba(139,92,246,0.15);
+        }
+
+        /* Password row with show/hide */
+        .password-wrap { position: relative; }
+        .password-wrap .field-input { padding-right: 3rem; }
+        .show-pass {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #6B7280;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        .show-pass:hover { color: #A78BFA; }
+
+        /* Forgot password link */
+        .row-between {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 1.75rem;
+            margin-top: -0.5rem;
+        }
+        .forgot-link {
+            color: #8B5CF6;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .forgot-link:hover { color: #A78BFA; }
+
+        /* Sign In button */
+        .btn-signin {
+            width: 100%;
+            padding: 0.95rem;
+            background: linear-gradient(135deg, #7C3AED, #8B5CF6, #A78BFA);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s;
+            box-shadow: 0 4px 20px rgba(139,92,246,0.3);
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.01em;
+        }
+        .btn-signin:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(139,92,246,0.5);
+        }
+        .btn-signin:active { transform: translateY(0); }
+
+        .register-link {
+            text-align: center;
+            color: #9CA3AF;
+            font-size: 0.9rem;
+        }
+        .register-link a {
+            color: #A78BFA;
+            font-weight: 700;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .register-link a:hover { color: #fff; }
+
+        /* Light mode overrides */
+        [data-theme='light'] .hero-panel::before {
+            background:
+                radial-gradient(ellipse 100% 80% at 20% 20%, rgba(110,50,200,0.6) 0%, transparent 65%),
+                radial-gradient(ellipse 70% 60% at 80% 70%, rgba(180,70,120,0.4) 0%, transparent 60%);
+        }
+        [data-theme='light'] body { background: #f5f4fa; }
+        [data-theme='light'] .form-panel { background: #f5f4fa; }
+        [data-theme='light'] .form-header h2 { color: #111827; }
+        [data-theme='light'] .form-header p { color: #6B7280; }
+        [data-theme='light'] .field label { color: #374151; }
+        [data-theme='light'] .field-input {
+            background: #fff;
+            border-color: rgba(0,0,0,0.15);
+            color: #111827;
+        }
+        [data-theme='light'] .field-input::placeholder { color: #9CA3AF; }
+        [data-theme='light'] .field-input:focus { background: #faf8ff; }
+        [data-theme='light'] .register-link { color: #6B7280; }
+    </style>
+</head>
+<body>
+
+    <!-- ===================== LEFT: HERO PANEL ===================== -->
+    <div class="hero-panel">
+        <a href="index.html" class="brand-logo">
+            <svg viewBox="0 0 40 40" fill="none">
+                <circle cx="20" cy="20" r="20" fill="rgba(139,92,246,0.2)"/>
+                <path d="M20 5 A15 15 0 0 1 35 20 L20 20 Z" fill="#8B5CF6"/>
+                <path d="M20 20 L35 20 A15 15 0 0 1 20 35 Z" fill="#7C3AED"/>
+                <path d="M20 20 L20 35 A15 15 0 0 1 5 20 Z" fill="#A78BFA"/>
+                <path d="M20 20 L5 20 A15 15 0 0 1 20 5 Z" fill="#6D28D9"/>
+            </svg>
+            <span class="brand-name"><strong>RTN</strong> <span>LAI 5</span></span>
+        </a>
+
+        <div class="hero-content">
+            <h1>Your lottery<br><span>dashboard</span><br>awaits.</h1>
+            <p>Access real-time inventory, shift reports, AI insights, and theft alerts — all from one powerful platform.</p>
+            <div class="stat-row">
+                <div class="stat-item">
+                    <div class="stat-num">10,000+</div>
+                    <div class="stat-label">Stores nationwide</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-num">50</div>
+                    <div class="stat-label">US States covered</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-num">5149+</div>
+                    <div class="stat-label">5★ Reviews</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-footer">
+            © 2025 RTN LAI 5 &nbsp;·&nbsp; <a href="privacy.html">Privacy</a> &nbsp;·&nbsp; <a href="terms.html">Terms</a>
+        </div>
+    </div>
+
+    <!-- ===================== RIGHT: FORM PANEL ===================== -->
+    <div class="form-panel">
+        <!-- Theme toggle -->
+        <button class="theme-btn" onclick="toggleTheme()" aria-label="Switch theme" id="theme-toggle-btn">
+            <span class="theme-icon">☀️</span>
+            <span class="theme-label">Theme</span>
+        </button>
+
+        <div class="form-box">
+            <div class="form-header">
+                <h2>Sign In</h2>
+                <p>Enter your credentials to access your store dashboard</p>
+            </div>
+
+            <!-- Form posts to local API server -->
+            <form id="login-form" novalidate>
+
+                <div class="field">
+                    <label for="username">Username <span class="req">*</span></label>
+                    <input type="text"
+                           id="username"
+                           name="Login.UserName"
+                           class="field-input"
+                           placeholder="Enter your username"
+                           required
+                           autocomplete="username">
+                </div>
+
+                <div class="field">
+                    <label for="password">Password <span class="req">*</span></label>
+                    <div class="password-wrap">
+                        <input type="password"
+                               id="password"
+                               name="Login.Password"
+                               class="field-input"
+                               placeholder="••••••••"
+                               required
+                               autocomplete="current-password">
+                        <button type="button" class="show-pass" id="show-pass-btn" title="Toggle password visibility">👁</button>
+                    </div>
+                </div>
+
+                <div class="row-between">
+                    <a href="#" class="forgot-link">Forgot Password?</a>
+                </div>
+
+                <!-- Status message -->
+                <div id="login-status" style="display:none; padding:0.85rem 1rem; border-radius:12px; margin-bottom:1rem; font-size:0.9rem; font-weight:600;"></div>
+
+                <button type="submit" class="btn-signin" id="login-btn">Sign In</button>
+
+            </form>
+
+            <p class="register-link" style="margin-bottom:1rem;">
+                Need to extend coverage or hardware? <a href="renew-scanner.html">Renew / Buy Scanner</a>
+            </p>
+
+            <p class="register-link">
+                Don't have an account? <a href="registration.html">Register now</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Show/Hide password
+        const passInput = document.getElementById('password');
+        const passBtn   = document.getElementById('show-pass-btn');
+        passBtn.addEventListener('click', () => {
+            const isPass = passInput.type === 'password';
+            passInput.type    = isPass ? 'text' : 'password';
+            passBtn.textContent = isPass ? '🙈' : '👁';
+        });
+
+        // Focus glow on inputs
+        document.querySelectorAll('.field-input').forEach(inp => {
+            inp.addEventListener('focus', () => inp.closest('.field').style.transform = 'translateY(-2px)');
+            inp.addEventListener('blur',  () => inp.closest('.field').style.transform = 'translateY(0)');
+        });
+
+        // Login fetch
+        const API_BASE = window.location.origin;
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn    = document.getElementById('login-btn');
+            const status = document.getElementById('login-status');
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            btn.disabled    = true;
+            btn.textContent = 'Signing in…';
+            status.style.display = 'none';
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/login`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const json = await resp.json();
+
+                if (resp.ok && json.success) {
+                    status.style.cssText = 'display:block;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:#10B981;padding:0.85rem 1rem;border-radius:12px;margin-bottom:1rem;';
+                    status.textContent   = '✅ ' + json.message + ' Redirecting…';
+                    btn.textContent      = '✅ Signed In!';
+                    setTimeout(() => window.location.href = 'index.html', 1800);
+                } else {
+                    status.style.cssText = 'display:block;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#EF4444;padding:0.85rem 1rem;border-radius:12px;margin-bottom:1rem;';
+                    status.textContent   = '❌ ' + (json.error || 'Login failed. Please try again.');
+                    btn.disabled         = false;
+                    btn.textContent      = 'Sign In';
+                }
+            } catch (err) {
+                status.style.cssText = 'display:block;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#EF4444;padding:0.85rem 1rem;border-radius:12px;margin-bottom:1rem;';
+                status.textContent   = '❌ Server not reachable. Make sure the local server is running.';
+                btn.disabled         = false;
+                btn.textContent      = 'Sign In';
+            }
+        });
+    </script>
+</body>
+</html>

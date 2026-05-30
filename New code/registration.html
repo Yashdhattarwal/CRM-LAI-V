@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration - RTN LAI</title>
+    <link rel="stylesheet" href="./css/global.css">
+    <link rel="stylesheet" href="./css/landing.css">
+    <script src="./js/theme.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #F9FAFB 0%, #E5E7EB 100%);
+            min-height: 100vh;
+        }
+
+        .registration-container {
+            max-width: 1200px;
+            margin: 6rem auto 4rem;
+            padding: 2rem;
+        }
+
+        .registration-title {
+            text-align: center;
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 3rem;
+            background: linear-gradient(135deg, var(--text-main) 0%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .main-form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        @media (min-width: 900px) {
+            .main-form-grid {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+
+        .form-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.08); /* LAI 5 Purplish glow */
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            margin-bottom: 2rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .form-section:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 50px rgba(139, 92, 246, 0.15);
+        }
+
+        .form-section h3 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            border-bottom: 2px solid rgba(139, 92, 246, 0.15);
+            padding-bottom: 0.75rem;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-sec);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .required-asterisk {
+            color: #ef4444;
+            font-weight: bold;
+            margin-left: 2px;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .input-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+            outline: none;
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.95rem;
+            color: var(--text-sec);
+            margin-bottom: 0.85rem;
+            font-weight: 500;
+        }
+
+        .price-row.total {
+            font-weight: 800;
+            color: var(--primary);
+            font-size: 1.25rem;
+            border-top: none;
+            padding: 1rem;
+            margin-top: 1rem;
+            background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(139,92,246,0.03));
+            border-radius: 12px;
+            border: 1px solid rgba(139,92,246,0.2);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 1.2rem;
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-top: 1.5rem;
+            background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+            box-shadow: 0 10px 25px rgba(139,92,246,0.3);
+            border-radius: 12px;
+            border: none;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(139,92,246,0.4);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="nav-container flex items-center justify-between">
+            <a href="index.html" class="nav-logo" style="color:var(--text-main); font-weight:800; font-size:1.5rem; text-decoration:none;">L.A.I. <span style="color:#8B5CF6;">5</span></a>
+            <div class="nav-links flex items-center" style="gap:1rem;">
+                <a href="index.html#overview">Overview</a>
+                <a href="index.html#whylai">Why Us</a>
+                <a href="index.html#whouseslai">Who Uses LAI</a>
+                <a href="index.html#faq">FAQ</a>
+                <a href="index.html#pricing">Pricing</a>
+                <a href="login.html" class="btn btn-outline" style="margin-left:2rem; border-color:var(--border); border-radius:8px;">Login</a>
+                <a href="registration.html" class="btn" style="background:#8B5CF6; color:white; border-radius:8px; margin-left:0;">Start Free Trial</a>
+                <button class="theme-toggle-btn" onclick="toggleTheme()" title="Switch to Dark Mode" aria-label="Switch to Dark Mode">
+                    <span class="theme-icon">🌙</span>
+                    <span class="theme-label">Theme</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="registration-container">
+        <h1 class="registration-title">Registration</h1>
+
+        <form id="reg-form" novalidate>
+            <div class="main-form-grid">
+                <!-- Left Column -->
+                <div class="left-col">
+                    <div class="form-section">
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label>First Name <span class="required-asterisk">*</span></label>
+                                <input type="text" class="input-control" name="first_name" required />
+                            </div>
+                            <div class="input-group">
+                                <label>Last Name <span class="required-asterisk">*</span></label>
+                                <input type="text" class="input-control" name="last_name" required />
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Email <span class="required-asterisk">*</span></label>
+                            <input type="email" class="input-control" name="email" required />
+                        </div>
+
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label>Mobile Number <span class="required-asterisk">*</span></label>
+                                <input type="text" class="input-control" id="mobile" name="mobile" required />
+                            </div>
+                            <div class="input-group">
+                                <label>Store Phone Number <span class="required-asterisk">*</span></label>
+                                <input type="text" class="input-control" id="store_phone" name="store_phone" required />
+                            </div>
+                        </div>
+
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label>Address <span class="required-asterisk">*</span></label>
+                                <input type="text" class="input-control" id="address" placeholder="Start typing address..." required />
+                            </div>
+                            <div class="input-group">
+                                <label>City <span class="required-asterisk">*</span></label>
+                                <input type="text" class="input-control" id="City" required />
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>State <span class="required-asterisk">*</span></label>
+                            <select class="input-control" id="State" required>
+                                <option value="">Select State</option>
+                                <option value="AL">Alabama</option>
+                                <option value="AK">Alaska</option>
+                                <option value="AZ">Arizona</option>
+                                <option value="AR">Arkansas</option>
+                                <option value="CA">California</option>
+                                <option value="CO">Colorado</option>
+                                <option value="CT">Connecticut</option>
+                                <option value="DE">Delaware</option>
+                                <option value="FL">Florida</option>
+                                <option value="GA">Georgia</option>
+                                <option value="HI">Hawaii</option>
+                                <option value="ID">Idaho</option>
+                                <option value="IL">Illinois</option>
+                                <option value="IN">Indiana</option>
+                                <option value="IA">Iowa</option>
+                                <option value="KS">Kansas</option>
+                                <option value="KY">Kentucky</option>
+                                <option value="LA">Louisiana</option>
+                                <option value="ME">Maine</option>
+                                <option value="MD">Maryland</option>
+                                <option value="MA">Massachusetts</option>
+                                <option value="MI">Michigan</option>
+                                <option value="MN">Minnesota</option>
+                                <option value="MS">Mississippi</option>
+                                <option value="MO">Missouri</option>
+                                <option value="MT">Montana</option>
+                                <option value="NE">Nebraska</option>
+                                <option value="NV">Nevada</option>
+                                <option value="NH">New Hampshire</option>
+                                <option value="NJ">New Jersey</option>
+                                <option value="NM">New Mexico</option>
+                                <option value="NY">New York</option>
+                                <option value="NC">North Carolina</option>
+                                <option value="ND">North Dakota</option>
+                                <option value="OH">Ohio</option>
+                                <option value="OK">Oklahoma</option>
+                                <option value="OR">Oregon</option>
+                                <option value="PA">Pennsylvania</option>
+                                <option value="RI">Rhode Island</option>
+                                <option value="SC">South Carolina</option>
+                                <option value="SD">South Dakota</option>
+                                <option value="TN">Tennessee</option>
+                                <option value="TX">Texas</option>
+                                <option value="UT">Utah</option>
+                                <option value="VT">Vermont</option>
+                                <option value="VA">Virginia</option>
+                                <option value="WA">Washington</option>
+                                <option value="WV">West Virginia</option>
+                                <option value="WI">Wisconsin</option>
+                                <option value="WY">Wyoming</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label>ZipCode <span class="required-asterisk">*</span></label>
+                            <input type="text" class="input-control" id="ZipCode" required />
+                        </div>
+
+                        <div class="input-group">
+                            <label>Store Name <span class="required-asterisk">*</span></label>
+                            <input type="text" class="input-control" id="store_name" name="store_name" required />
+                        </div>
+
+                        <div class="input-group">
+                            <label>Corporation Name <span class="required-asterisk">*</span></label>
+                            <input type="text" class="input-control" id="corporation" name="corporation" required />
+                        </div>
+
+                        <div class="input-group" style="margin-bottom:0;">
+                            <label>User Name (Preferred) <span class="required-asterisk">*</span></label>
+                            <input type="text" class="input-control" id="username" name="username" required />
+                        </div>
+
+                        <div class="input-group" style="margin-bottom:0; margin-top:1rem;">
+                            <label>Password <span class="required-asterisk">*</span></label>
+                            <input type="password" class="input-control" id="password" name="password" placeholder="Create a password" required />
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>Select your Product</h3>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label>Product:</label>
+                                <select class="input-control" id="product-select">
+                                    <option>LAI V</option>
+                                    <option>RTN Display</option>
+                                    <option>LAI Pro (LAI V + RTN Display)</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>Plan:</label>
+                                <select class="input-control" id="plan-select">
+                                    <option value="">Select a Plan</option>
+                                    <option>1 Year</option>
+                                    <option>Monthly</option>
+                                    <option value="Trial">Trial (30 Days)</option>
+                                    <option>2 Years</option>
+                                    <option>3 Years</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-row" style="margin-bottom:0;">
+                            <div class="input-group" style="margin-bottom:0;">
+                                <label>Scanner:</label>
+                                <select class="input-control" id="scanner-select">
+                                    <option>Not-Needed</option>
+                                    <option>WiFi-Scanner</option>
+                                    <option>Display-Scanner</option>
+                                    <option>WiFi & Display Scanner</option>
+                                </select>
+                            </div>
+                            <div class="input-group" style="margin-bottom:0;">
+                                <label>Shipping:</label>
+                                <select class="input-control" id="shipping-select">
+                                    <option>Standard</option>
+                                    <option>Priority</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="right-col">
+                    <div class="form-section">
+                        <div class="flex items-center gap-2" style="margin-bottom: 2rem;">
+                            <label style="white-space:nowrap; font-size:0.85rem; font-weight:500; color:var(--text-sec)">Promo Code:</label>
+                            <input type="text" class="input-control" style="padding: 0.4rem 1rem;" placeholder="Enter Promo Code" />
+                            <button type="button" class="btn btn-outline" style="padding: 0.4rem 1rem;">Apply</button>
+                        </div>
+
+                        <div class="price-row">
+                            <span id="label-product">LAI V:</span>
+                            <span id="price-product">$0.00</span>
+                        </div>
+                        <div class="price-row">
+                            <span>Scanner:</span>
+                            <span id="price-scanner">$0.00</span>
+                        </div>
+                        <div class="price-row">
+                            <span>Shipping and Handling:</span>
+                            <span id="price-shipping">$0.00</span>
+                        </div>
+                        <div class="price-row">
+                            <span>Tax (7%):</span>
+                            <span id="price-tax">$0.00</span>
+                        </div>
+                        <div class="price-row" style="color: var(--danger);">
+                            <span>Discount-Promocode(-):</span>
+                            <span>$0.00</span>
+                        </div>
+                        <div class="price-row total">
+                            <span>Grand Total:</span>
+                            <span id="price-total">$0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="form-section" style="position:relative; overflow:hidden;">
+                        <h3>Payment Mode</h3>
+
+                        <div style="display:flex; gap:2rem; margin-bottom:1.5rem;">
+                            <label class="flex items-center gap-2" style="font-size:1rem; cursor:pointer; color:var(--text-main); font-weight:600;">
+                                <input type="radio" name="payment_mode" value="ACH" id="pay-mode-ach" style="width:18px; height:18px; accent-color:var(--primary);" onchange="togglePaymentFields()" />
+                                By E Check
+                            </label>
+                            <label class="flex items-center gap-2" style="font-size:1rem; cursor:pointer; color:var(--text-main); font-weight:600;">
+                                <input type="radio" name="payment_mode" value="Card" id="pay-mode-card" checked style="width:18px; height:18px; accent-color:var(--primary);" onchange="togglePaymentFields()" />
+                                By Credit / Debit Card
+                            </label>
+                        </div>
+
+                        <!-- ── ACH FIELDS ── -->
+                        <div id="ach-fields" style="display:none;">
+                            <div class="input-group">
+                                <label>Bank Name:</label>
+                                <input type="text" id="ach-bank-name" class="input-control" placeholder="Enter bank name" />
+                            </div>
+                            <div class="input-group">
+                                <label>Routing No:</label>
+                                <input type="text" id="ach-routing" class="input-control" placeholder="9-digit routing number" maxlength="9" />
+                            </div>
+                            <div class="input-group">
+                                <label>Account No:</label>
+                                <input type="text" id="ach-account" class="input-control" placeholder="Enter account number" />
+                            </div>
+                            <div class="input-group">
+                                <label>Account Type:</label>
+                                <select id="ach-account-type" class="input-control">
+                                    <option value="CHECKING" selected>CHECKING</option>
+                                    <option value="BUSINESS CHECKING">BUSINESS CHECKING</option>
+                                    <option value="SAVINGS">SAVINGS</option>
+                                </select>
+                            </div>
+                            <div class="input-group" style="margin-bottom:0;">
+                                <label>Name On the Account:</label>
+                                <input type="text" id="ach-account-name" class="input-control" placeholder="Enter full name on account" />
+                            </div>
+                        </div>
+
+                        <!-- ── CARD FIELDS ── -->
+                        <div id="card-fields">
+                            <!-- ── TEST MODE BANNER ── -->
+                            <div style="background:linear-gradient(135deg,rgba(139,92,246,0.12),rgba(59,130,246,0.08)); border:1.5px solid rgba(139,92,246,0.35); border-radius:14px; padding:1.1rem 1.2rem; margin-bottom:1.5rem;">
+                                <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.75rem;">
+                                    <span style="background:#8B5CF6; color:#fff; font-size:0.72rem; font-weight:800; padding:0.2rem 0.6rem; border-radius:4px; letter-spacing:1px;">TEST MODE</span>
+                                    <span style="font-size:0.88rem; font-weight:700; color:#6D28D9;">Use these details for local testing</span>
+                                </div>
+                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem 1.5rem; font-size:0.88rem;">
+                                    <div>
+                                        <span style="color:#9CA3AF; font-size:0.78rem; font-weight:600; display:block; margin-bottom:1px;">CARD NUMBER</span>
+                                        <span style="font-family:monospace; font-weight:700; color:#1a0f2e; letter-spacing:2px; font-size:1rem;">4242 4242 4242 4242</span>
+                                    </div>
+                                    <div>
+                                        <span style="color:#9CA3AF; font-size:0.78rem; font-weight:600; display:block; margin-bottom:1px;">EXPIRY</span>
+                                        <span style="font-family:monospace; font-weight:700; color:#1a0f2e;">12 / 2028</span>
+                                    </div>
+                                    <div>
+                                        <span style="color:#9CA3AF; font-size:0.78rem; font-weight:600; display:block; margin-bottom:1px;">CVV / AUTH CODE</span>
+                                        <span style="font-family:monospace; font-weight:700; color:#1a0f2e;">123</span>
+                                    </div>
+                                    <div>
+                                        <span style="color:#9CA3AF; font-size:0.78rem; font-weight:600; display:block; margin-bottom:1px;">CARD TYPE</span>
+                                        <span style="font-weight:700; color:#1a0f2e;">Visa (Test) ✓</span>
+                                    </div>
+                                </div>
+                                <button type="button" id="autofill-card-btn" onclick="autofillTestCard()" style="margin-top:1rem; background:linear-gradient(135deg,#8B5CF6,#6D28D9); color:#fff; border:none; border-radius:8px; padding:0.5rem 1.25rem; font-weight:700; font-size:0.88rem; cursor:pointer; transition:all 0.2s;">⚡ Auto-fill Test Card</button>
+                            </div>
+
+                            <div class="input-group">
+                                <label>Credit Card No:</label>
+                                <input type="text" id="card-number" class="input-control" placeholder="4242 4242 4242 4242" maxlength="19" />
+                            </div>
+
+                            <div class="input-group">
+                                <label>Exp Date:</label>
+                                <div class="input-row">
+                                    <select class="input-control" id="card-exp-month">
+                                        <option value="01">January</option>
+                                        <option value="12" selected>December</option>
+                                    </select>
+                                    <select class="input-control" id="card-exp-year">
+                                        <option>2025</option>
+                                        <option selected>2028</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="input-group" style="margin-bottom:0;">
+                                <label>Authorization Code (CVV):</label>
+                                <input type="text" id="card-cvv" class="input-control" placeholder="123" maxlength="4" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status message -->
+                    <div id="reg-status" style="display:none; padding:1rem; border-radius:12px; margin-top:1rem; font-weight:600; font-size:0.95rem;"></div>
+                    <button type="submit" class="btn btn-primary submit-btn" id="reg-submit-btn">Submit Registration</button>
+                </div>
+            </div>
+        </form>
+    </main>
+
+    <footer class="footer" style="background:#F9F9F9; padding:4rem; border-radius:16px; max-width: 1200px; margin: 4rem auto 2rem; border: 1px solid var(--border); text-align: left;">
+        <div style="margin-bottom: 3rem;">
+            <div style="font-weight:700; font-size:1.2rem; margin-bottom:1rem; color:var(--text-main);">
+                admin@realtnetworking.com / support@realtnetworking.com
+            </div>
+            <div style="font-weight:700; font-size:1.2rem; color:var(--text-main); display: flex; gap: 2rem;">
+                <span>1-855-396-1776</span>
+                <span>1-478-396-1776</span>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
+            <div>
+                <h4 style="font-size:1.2rem; margin-bottom:1.5rem; color:var(--text-main);">Keep exploring</h4>
+                <ul style="list-style:none; padding:0; margin:0;">
+                    <li style="margin-bottom:1rem;"><a href="index.html#overview" style="color:var(--text-main); text-decoration:none; font-weight: 500;">Overview</a></li>
+                    <li style="margin-bottom:1rem;"><a href="index.html#whylai" style="color:var(--text-main); text-decoration:none; font-weight: 500;">Why Us</a></li>
+                    <li style="margin-bottom:1rem;"><a href="index.html#whouseslai" style="color:var(--text-main); text-decoration:none; font-weight: 500;">Who Uses LAI</a></li>
+                    <li style="margin-bottom:1rem;"><a href="index.html#pricing" style="color:var(--text-main); text-decoration:none; font-weight: 500;">Pricing</a></li>
+                    <li style="margin-bottom:0;"><a href="index.html#faq" style="color:var(--text-main); text-decoration:none; font-weight: 500;">FAQ</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 style="font-size:1.2rem; margin-bottom:1.5rem; color:var(--text-main);">Legal</h4>
+                <ul style="list-style:none; padding:0; margin:0;">
+                    <li style="margin-bottom:1rem;"><a href="./privacy.html" style="color:var(--text-main); text-decoration:none; font-weight: 500;">Privacy and Policy</a></li>
+                    <li style="margin-bottom:0;"><a href="./terms.html" style="color:var(--text-main); text-decoration:none; font-weight: 500;">Terms and Conditions</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 style="font-size:1.2rem; margin-bottom:1.5rem; color:var(--text-main);">Location and Socials</h4>
+                <p style="color:var(--text-sec); line-height:1.6; margin-bottom:1.5rem; font-weight: 500;">
+                    844 W Montgomery St, Milledgeville, GA<br>
+                    31061, United States
+                </p>
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <button class="btn btn-outline" style="border-radius:8px; padding:0.4rem 1rem; border-color:var(--border); display:flex; align-items:center; gap:0.5rem; background:var(--bg); border: 1px solid #E5E7EB; color:var(--text-main); font-weight:500;">
+                        📍 Map
+                    </button>
+                    <!-- Social Icons -->
+                    <div style="width:32px; height:32px; border-radius:50%; background:#1A1A1A; display:flex; justify-content:center; align-items:center; color:white; font-size:14px; font-weight:bold; cursor:pointer;">f</div>
+                    <div style="width:32px; height:32px; border-radius:50%; background:#1A1A1A; display:flex; justify-content:center; align-items:center; color:white; font-size:14px; cursor:pointer;">📷</div>
+                    <div style="width:32px; height:32px; border-radius:50%; background:#1A1A1A; display:flex; justify-content:center; align-items:center; color:white; font-size:12px; font-weight:bold; cursor:pointer;">in</div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const productSelect = document.getElementById('product-select');
+            const planSelect = document.getElementById('plan-select');
+            const scannerSelect = document.getElementById('scanner-select');
+            const shippingSelect = document.getElementById('shipping-select');
+            
+            const pProductLabel = document.getElementById('label-product');
+            const pProduct = document.getElementById('price-product');
+            const pScanner = document.getElementById('price-scanner');
+            const pShipping = document.getElementById('price-shipping');
+            const pTax = document.getElementById('price-tax');
+            const pTotal = document.getElementById('price-total');
+            
+            function calculateTotal() {
+                let productTotal = 0;
+                
+                // Product Prices (Inclusive of Tax)
+                const isMonthly = planSelect.value === 'Monthly';
+                const isYearly  = planSelect.value === '1 Year' || planSelect.value === '2 Years' || planSelect.value === '3 Years';
+                
+                if (isMonthly || isYearly) {
+                    if (productSelect.value === 'LAI V') {
+                        productTotal = isMonthly ? 39.99 : 299.99;
+                    } else if (productSelect.value === 'RTN Display') {
+                        productTotal = isMonthly ? 39.99 : 399.99;
+                    } else if (productSelect.value === 'LAI Pro (LAI V + RTN Display)') {
+                        productTotal = isMonthly ? 59.99 : 599.99;
+                    }
+
+                    // Multi-year multiplier
+                    if (planSelect.value === '2 Years') productTotal *= 2;
+                    else if (planSelect.value === '3 Years') productTotal *= 3;
+                } else if (planSelect.value === 'Trial') {
+                    productTotal = 0;
+                }
+                
+                // Scanner Price (Inclusive of Tax: $79.78)
+                let scannerTotal = 0;
+                if (scannerSelect.value !== 'Not-Needed') {
+                    if (scannerSelect.value === 'WiFi & Display Scanner') {
+                        scannerTotal = 159.56; // 79.78 * 2
+                    } else {
+                        scannerTotal = 79.78; 
+                    }
+                }
+                
+                // Shipping Logic
+                let shippingTotal = 0;
+                if (scannerSelect.value !== 'Not-Needed' && planSelect.value !== 'Trial') { 
+                    if (scannerSelect.value === 'WiFi & Display Scanner') {
+                        shippingTotal = 29.98;
+                    } else {
+                        shippingTotal = 14.99;
+                    }
+                }
+                
+                let grandTotal = productTotal + scannerTotal + shippingTotal;
+                
+                pProductLabel.textContent = productSelect.value + ':';
+                pProduct.textContent = '$' + productTotal.toFixed(2);
+                pScanner.textContent = '$' + scannerTotal.toFixed(2);
+                pShipping.textContent = '$' + shippingTotal.toFixed(2);
+                pTax.textContent = '$0.00'; // Tax is included in the base prices
+                pTotal.textContent = '$' + grandTotal.toFixed(2);
+            }
+            
+            [productSelect, planSelect, scannerSelect, shippingSelect].forEach(el => {
+                if (el) el.addEventListener('change', calculateTotal);
+            });
+            
+            calculateTotal(); // Initialize pricing perfectly on load
+        });
+    </script>
+    
+    <!-- Google Maps Autocomplete API Script -->
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?sensor=true&libraries=places&key=AIzaSyBqhn7ZIQop-n-sSy33REcP26AGCQzWJDQ"></script>
+    <script>
+        function initAutocomplete() {
+            var input = document.getElementById('address');
+            if(!input) return;
+            var autocomplete = new google.maps.places.Autocomplete(input, { types: ['geocode'] });
+
+            autocomplete.addListener('place_changed', function () {
+                var place = autocomplete.getPlace();
+                if (!place.geometry) return;
+
+                var city = '';
+                var state = '';
+                var postalCode = '';
+                
+                place.address_components.forEach(function (component) {
+                    component.types.forEach(function(element) {
+                        if (element === 'locality') {
+                            city = component.long_name;
+                        } else if (!city && element === 'neighborhood') {
+                            city = component.long_name;
+                        } else if (element === 'administrative_area_level_1') {
+                            state = component.long_name;
+                        } else if (element === 'postal_code') {
+                            postalCode = component.long_name;
+                        }
+                    });
+                });
+                
+                var cityInput = document.getElementById('City');
+                if (cityInput) cityInput.value = city;
+                
+                var stateInput = document.getElementById('State');
+                if (stateInput) stateInput.value = state;
+                
+                var zipInput = document.getElementById('ZipCode');
+                if (zipInput) zipInput.value = postalCode;
+            });
+        }
+        google.maps.event.addDomListener(window, 'load', initAutocomplete);
+    </script>
+
+    <script>
+    /* ── Registration form → Local API ── */
+    const API_BASE = 'http://localhost:3001';
+
+    /* ── Test card autofill ── */
+    function autofillTestCard() {
+        const cardNum = document.getElementById('card-number');
+        const expMon  = document.getElementById('card-exp-month');
+        const expYr   = document.getElementById('card-exp-year');
+        const cvv     = document.getElementById('card-cvv');
+        if (cardNum) cardNum.value = '4242 4242 4242 4242';
+        if (expMon)  expMon.value  = '12';
+        if (expYr)   expYr.value   = '2028';
+        if (cvv)     cvv.value     = '123';
+        // Flash the button green
+        const btn = document.getElementById('autofill-card-btn');
+        if (btn) {
+            btn.textContent = '✅ Filled!';
+            btn.style.background = 'linear-gradient(135deg,#10B981,#059669)';
+            setTimeout(() => {
+                btn.textContent = '⚡ Auto-fill Test Card';
+                btn.style.background = 'linear-gradient(135deg,#8B5CF6,#6D28D9)';
+            }, 2000);
+        }
+    }
+
+    /* ── Card number formatting (spaces every 4 digits) ── */
+    const cardInput = document.getElementById('card-number');
+    if (cardInput) {
+        cardInput.addEventListener('input', function() {
+            let raw = this.value.replace(/\D/g, '').slice(0, 16);
+            this.value = raw.match(/.{1,4}/g)?.join(' ') || raw;
+        });
+    }
+
+    /* ── Payment Mode Toggling ── */
+    function togglePaymentFields() {
+        const isACH = document.getElementById('pay-mode-ach').checked;
+        document.getElementById('ach-fields').style.display = isACH ? 'block' : 'none';
+        document.getElementById('card-fields').style.display = isACH ? 'none' : 'block';
+    }
+
+    /* ── Check URL for ?ach=1 on load ── */
+    window.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('ach') === '1') {
+            document.getElementById('pay-mode-ach').checked = true;
+            togglePaymentFields();
+        }
+    });
+
+    document.getElementById('reg-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const btn    = document.getElementById('reg-submit-btn');
+        const status = document.getElementById('reg-status');
+
+        const data = {};
+        // Grab form fields manually for reliability
+        data.first_name  = document.getElementById('reg-form').querySelector('[name="first_name"]').value;
+        data.last_name   = document.getElementById('reg-form').querySelector('[name="last_name"]').value;
+        data.email       = document.getElementById('reg-form').querySelector('[name="email"]').value;
+        data.mobile      = document.getElementById('mobile').value;
+        data.store_phone = document.getElementById('store_phone').value;
+        data.username    = document.getElementById('username').value;
+        data.password    = document.getElementById('password').value;
+        data.store_name  = document.getElementById('store_name').value;
+        data.corporation = document.getElementById('corporation').value;
+
+        // Grab select/autocomplete fields
+        data.product  = document.getElementById('product-select')?.value  || 'LAI V';
+        data.plan     = document.getElementById('plan-select')?.value     || 'Trial (30 Days)';
+        data.scanner  = document.getElementById('scanner-select')?.value  || 'Not-Needed';
+        data.shipping = document.getElementById('shipping-select')?.value || 'Standard';
+        data.address  = document.getElementById('address')?.value         || '';
+        data.city     = document.getElementById('City')?.value            || '';
+        data.state    = document.getElementById('State')?.value           || '';
+        data.zipcode  = document.getElementById('ZipCode')?.value         || '';
+
+        // Grab Payment Details
+        const isACH = document.getElementById('pay-mode-ach').checked;
+        data.payment_mode = isACH ? 'ACH' : 'Card';
+        if (isACH) {
+            data.bank_name    = document.getElementById('ach-bank-name').value;
+            data.routing_no   = document.getElementById('ach-routing').value;
+            data.account_no   = document.getElementById('ach-account').value;
+            data.account_type = document.getElementById('ach-account-type').value;
+            data.account_name = document.getElementById('ach-account-name').value;
+        } else {
+            data.card_no        = document.getElementById('card-number').value.replace(/\s/g, '');
+            data.card_exp_month = document.getElementById('card-exp-month').value;
+            data.card_exp_year  = document.getElementById('card-exp-year').value;
+            data.card_cvv       = document.getElementById('card-cvv').value;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Submitting…';
+        status.style.display = 'none';
+
+        try {
+            const resp = await fetch(`${API_BASE}/api/register`, {
+                method: 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const json = await resp.json();
+
+            if (resp.ok && json.success) {
+                status.style.cssText = 'display:block;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:#10B981;padding:1rem;border-radius:12px;margin-top:1rem;';
+                status.innerHTML = '✅ ' + json.message + '<br><small>Redirecting…</small>';
+                btn.textContent = '✅ Registered!';
+                setTimeout(() => window.location.href = 'index.html', 2500);
+            } else {
+                status.style.cssText = 'display:block;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#EF4444;padding:1rem;border-radius:12px;margin-top:1rem;';
+                status.textContent = '❌ ' + (json.error || 'Registration failed. Please try again.');
+                btn.disabled = false;
+                btn.textContent = 'Submit Registration';
+            }
+        } catch (err) {
+            status.style.cssText = 'display:block;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#EF4444;padding:1rem;border-radius:12px;margin-top:1rem;';
+            status.textContent = '❌ Server not reachable. Make sure the local server is running.';
+            btn.disabled = false;
+            btn.textContent = 'Submit Registration';
+        }
+    });
+    </script>
+</body>
+</html>

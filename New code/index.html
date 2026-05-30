@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAI 5 - AI Lottery Management Software for Retailers | RTN</title>
+    <meta name="description" content="LAI 5 is AI-powered lottery management software for lottery retailers. Automate lottery tracking, inventory management, theft prevention, and shift reports. All 50 states. 30-day free trial.">
+    <meta name="robots" content="index, follow">
+    <link rel="stylesheet" href="./css/global.css">
+    <link rel="stylesheet" href="./css/landing.css">
+    <script src="./js/theme.js"></script>
+    <script src="./js/landing.js"></script>
+    <link rel="stylesheet" href="./css/homepage.css">
+</head>
+<body>
+    <header>
+        <div class="nav-container flex items-center justify-between">
+            <a href="#" class="nav-logo" style="display:flex;align-items:center;gap:0.5rem;">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <circle cx="16" cy="16" r="16" fill="rgba(139,92,246,0.2)"/>
+                    <path d="M16 4 A12 12 0 0 1 28 16 L16 16 Z" fill="#8B5CF6"/>
+                    <path d="M16 16 L28 16 A12 12 0 0 1 16 28 Z" fill="#7C3AED"/>
+                    <path d="M16 16 L16 28 A12 12 0 0 1 4 16 Z" fill="#A78BFA"/>
+                    <path d="M16 16 L4 16 A12 12 0 0 1 16 4 Z" fill="#6D28D9"/>
+                </svg>
+                <span><strong>RTN</strong> <span>LAI 5</span></span>
+            </a>
+            <div class="nav-links flex items-center" style="gap:1rem;">
+                <a href="/">Home</a>
+                <div class="nav-dropdown">
+                    <a href="/features/" class="dropdown-trigger">Features</a>
+                    <div class="dropdown-content">
+                        <a href="/features/multi-store/">Multi-Store Lottery Management</a>
+                    </div>
+                </div>
+                <div class="nav-dropdown">
+                    <a href="/solutions/" class="dropdown-trigger">Solutions</a>
+                    <div class="dropdown-content">
+                        <a href="/solutions/theft-prevention/">Lottery Theft Prevention</a>
+                    </div>
+                </div>
+                <div class="nav-dropdown">
+                    <a href="/industries/" class="dropdown-trigger">Industries</a>
+                    <div class="dropdown-content">
+                        <a href="/industries/">Who Uses LAI 5?</a>
+                    </div>
+                </div>
+                <a href="/#pricing">Pricing</a>
+                <a href="/login.html" class="btn-nav-contact" style="margin-left:1.5rem;">Login</a>
+                <a href="/#contact" class="btn-nav-contact">Contact now</a>
+                <button class="theme-toggle-btn" onclick="toggleTheme()" id="theme-toggle-btn" title="Switch Theme" aria-label="Switch Theme">
+                    <span class="theme-icon">☀️</span>
+                    <span class="theme-label">Theme</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+
+    <main>
+
+        <!-- ===================== HERO ===================== -->
+        <section class="hero" id="overview">
+            <h1>AI-Powered Lottery Management<br>Software for Every Retailer</h1>
+            <p>LAI 5 performs automated shift close - inventory updates, reconciliation, and shift reports done before your staff locks up. No spreadsheets. No manual counting. Built on AI lottery software technology that works while you focus on your customers. Trusted by gas stations, liquor stores, smoke shops, newsstands, and grocery stores across all 50 states - with operators reporting 15-30% growth in lottery sales. This lottery tracking software is built for every retailer that sells lottery tickets.</p>
+            <div class="hero-btns">
+                <a href="registration.html" class="btn-hero-primary">Start 30-Day Free Trial</a>
+                <a href="#contact" class="btn-hero-outline">Contact Sales</a>
+            </div>
+            <div class="review-badge">
+                <div>
+                    <span class="stars">★★★★★</span><br>
+                    <span style="color: rgba(255,255,255,0.6); font-size:0.75rem;">Trusted by 10,000+ Lottery Retailers  |  All 50 States</span>
+                </div>
+                <div class="maps-badge">
+                    <span>📍</span> <span>15-30% More Lottery Sales  |  30-Day Free Trial - No Card Required</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================== APP SHOWCASE ===================== -->
+        <section class="showcase">
+            <img src="./assets/app_showcase.png" alt="LAI 5 Dashboard — Lottery Ticket Tracking on Laptop and Mobile" loading="lazy">
+        </section>
+
+        <section class="trusted-section" id="whouseslai">
+            <span class="usa-flag">🇺🇸</span>
+            <h2>Trusted by 10,000+ Lottery Retailers<br>Across the USA</h2>
+            <div class="usa-map-container">
+                <svg id="usa-map-svg" viewBox="0 0 960 600" preserveAspectRatio="xMidYMid meet"
+                     style="width:100%;height:auto;filter:drop-shadow(0 0 14px rgba(139,92,246,0.4));"
+                     aria-label="US State Map"></svg>
+            </div>
+        </section>
+
+        <!-- ===================== TESTIMONIALS MARQUEE ===================== -->
+        <section class="testimonials-section" id="testimonials">
+            <h2>Loved by Lottery Retailers Nationwide</h2>
+            <div class="marquee-wrapper">
+                <div class="marquee-track">
+                    <!-- Row of cards — duplicated for seamless loop -->
+                    <div class="testi-card"><div class="testi-top"><div class="testi-user"><div class="testi-avatar" style="background:linear-gradient(135deg,#8B5CF6,#6D28D9);">V</div><div><div class="testi-name">Victor</div><div class="testi-handle">@victoruxui</div></div></div><span class="testi-platform">𝕏</span></div><p class="testi-text"><span class="testi-mention">@Lai</span> is the best! Our shift closing time dropped from 45 minutes to under 5.</p></div>
+                    <div class="testi-card"><div class="testi-top"><div class="testi-user"><div class="testi-avatar" style="background:linear-gradient(135deg,#EC4899,#8B5CF6);">L</div><div><div class="testi-name">Luca Restagno</div><div class="testi-handle">@ikoichi</div></div></div><span class="testi-platform" style="color:#1877F2">f</span></div><p class="testi-text">I used <span class="testi-mention">@Lai</span> to manage my store. It's an amazing product. I'm really impressed with the inventory tracking. <strong>Brilliant 👌</strong></p></div>
+                    <div class="testi-card"><div class="testi-top"><div class="testi-user"><div class="testi-avatar" style="background:linear-gradient(135deg,#0ea5e9,#38bdf8);">Z</div><div><div class="testi-name">Zack Swire</div><div class="testi-handle">@swire</div></div></div><span class="testi-platform" style="color:#1877F2">f</span></div><p class="testi-text">We stopped losing $400/month in lottery discrepancies after switching to <span class="testi-mention">@Lai</span>. The theft alerts alone are worth it.</p></div>
+                    <div class="testi-card"><div class="testi-top"><div class="testi-user"><div class="testi-avatar" style="background:linear-gradient(135deg,#10B981,#0d9488);">C</div><div><div class="testi-name">Connor Finlayson</div><div class="testi-handle">@FinlaysonConnor</div></div></div><span class="testi-platform">𝕏</span></div><p class="testi-text">Just a little <span class="testi-mention">@Lai</span> appreciation tweet. LAI has improved my content creation workflows significantly. <strong>Highly recommend.</strong></p></div>
+                    <div class="testi-card"><div class="testi-top"><div class="testi-user"><div class="testi-avatar" style="background:linear-gradient(135deg,#F59E0B,#EF4444);">T</div><div><div class="testi-name">Tom Osman</div><div class="testi-handle">@tomosman</div></div></div><span class="testi-platform">𝕏</span></div><p class="testi-text">Wow <span class="testi-mention">@Lai</span> is good ⚡ The AI insight feature showed me which tickets weren't moving. Restocked and sold out in a week.</p></div>
+                    <div class="testi-card"><div class="testi-top"><div class="testi-user"><div class="testi-avatar" style="background:linear-gradient(135deg,#A78BFA,#7C3AED);">J</div><div><div class="testi-name">James Devonport</div><div class="testi-handle">@jamesdevonport</div></div></div><span class="testi-platform">𝕏</span></div><p class="testi-text">Thank you, love <span class="testi-mention">@Lai</span> for the real-time tracking. Managing 3 stores used to be chaos — now it's one dashboard. 💜</p></div>
+                    <div class="testi-card"><div class="testi-top"><div class="testi-user"><div class="testi-avatar" style="background:linear-gradient(135deg,#34D399,#059669);">A</div><div><div class="testi-name">Alan Smith</div><div class="testi-handle">@AlanJLSmith</div></div></div><span class="testi-platform">𝕏</span></div><p class="testi-text">The best lottery software I've found is <span class="testi-mention">@lai</span>. Impeccable and speedy customer support, even on a Sunday!</p></div>
+                    <div class="testi-card"><div class="testi-top"><div class="testi-user"><div class="testi-avatar" style="background:linear-gradient(135deg,#F43F5E,#EC4899);">J</div><div><div class="testi-name">Jordan Godbey</div><div class="testi-handle">@jordangodbey</div></div></div><span class="testi-platform">𝕏</span></div><p class="testi-text">Loving how easy <span class="testi-mention">@Lai</span> makes running my lottery counter. The automated reports are sent before I even lock up. 🔥</p></div>
+                    <!-- Duplicate for seamless loop -->
+                    <div class="testi-card"><div class="testi-top"><div class="testi-user"><div class="testi-avatar" style="background:linear-gradient(135deg,#8B5CF6,#6D28D9);">V</div><div><div class="testi-name">Victor</div><div class="testi-handle">@victoruxui</div></div></div><span class="testi-platform">𝕏</span></div><p class="testi-text"><span class="testi-mention">@Lai</span> is the best! Our shift closing time dropped from 45 minutes to under 5.</p></div>
+                    <div class="testi-card"><div class="testi-top"><div class="testi-user"><div class="testi-avatar" style="background:linear-gradient(135deg,#EC4899,#8B5CF6);">L</div><div><div class="testi-name">Luca Restagno</div><div class="testi-handle">@ikoichi</div></div></div><span class="testi-platform" style="color:#1877F2">f</span></div><p class="testi-text">I used <span class="testi-mention">@Lai</span> to manage my store. It's an amazing product. I'm really impressed. <strong>Brilliant 👌</strong></p></div>
+                    <div class="testi-card"><div class="testi-top"><div class="testi-user"><div class="testi-avatar" style="background:linear-gradient(135deg,#0ea5e9,#38bdf8);">Z</div><div><div class="testi-name">Zack Swire</div><div class="testi-handle">@swire</div></div></div><span class="testi-platform" style="color:#1877F2">f</span></div><p class="testi-text">We stopped losing $400/month in lottery discrepancies after switching to <span class="testi-mention">@Lai</span>. Worth every penny.</p></div>
+                    <div class="testi-card"><div class="testi-top"><div class="testi-user"><div class="testi-avatar" style="background:linear-gradient(135deg,#10B981,#0d9488);">C</div><div><div class="testi-name">Connor Finlayson</div><div class="testi-handle">@FinlaysonConnor</div></div></div><span class="testi-platform">𝕏</span></div><p class="testi-text">Just a little <span class="testi-mention">@Lai</span> appreciation tweet. <strong>Highly recommend.</strong></p></div>
+                    <div class="testi-card"><div class="testi-top"><div class="testi-user"><div class="testi-avatar" style="background:linear-gradient(135deg,#F59E0B,#EF4444);">T</div><div><div class="testi-name">Tom Osman</div><div class="testi-handle">@tomosman</div></div></div><span class="testi-platform">𝕏</span></div><p class="testi-text">Wow <span class="testi-mention">@Lai</span> is good ⚡ The AI insight feature is genuinely impressive.</p></div>
+                    <div class="testi-card"><div class="testi-top"><div class="testi-user"><div class="testi-avatar" style="background:linear-gradient(135deg,#A78BFA,#7C3AED);">J</div><div><div class="testi-name">James Devonport</div><div class="testi-handle">@jamesdevonport</div></div></div><span class="testi-platform">𝕏</span></div><p class="testi-text">Managing 3 stores used to be chaos — now it's one dashboard with <span class="testi-mention">@Lai</span>. 💜</p></div>
+                    <div class="testi-card"><div class="testi-top"><div class="testi-user"><div class="testi-avatar" style="background:linear-gradient(135deg,#34D399,#059669);">A</div><div><div class="testi-name">Alan Smith</div><div class="testi-handle">@AlanJLSmith</div></div></div><span class="testi-platform">𝕏</span></div><p class="testi-text">The best software I've found is <span class="testi-mention">@lai</span>. Speedy customer support, even on a Sunday!</p></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================== WHY CHOOSE US ===================== -->
+        <section class="features-section" id="features">
+            <div class="section-max">
+                <p class="section-label">Why Choose Us</p>
+                <h2>Why Lottery Retailers Choose LAI 5 as Their Lottery Management Software</h2>
+                <p class="section-sub">Upgrading to LAI 5 means your staff stops counting tickets by hand and starts closing shifts in minutes. It was designed from the ground up for retail lottery operators - not adapted from a generic inventory tool - so every feature reflects how a real lottery counter actually runs. Daily operations run automatically: inventory updates as tickets are scanned, reconciliation happens without manual input, and shift reports land in your inbox before your employees have locked up. For any store that depends on lottery revenue, this is the upgrade that changes how the whole day feels.</p>
+
+                <!-- Row 1: 3 feature cards -->
+                <div class="features-grid-top">
+                    <div class="feat-card">
+                        <div class="feat-icon-wrap" style="background:rgba(139,92,246,0.15);">
+                            <span style="position:relative;z-index:1;">📋</span>
+                        </div>
+                        <h3>Faster Inventory Tracking</h3>
+                        <p>Faster lottery inventory tracking - close every shift in minutes, not hours, with zero manual paperwork.</p>
+                    </div>
+                    <div class="feat-card">
+                        <div class="feat-icon-wrap" style="background:rgba(234,179,8,0.12);">
+                            <span style="position:relative;z-index:1;">📊</span>
+                        </div>
+                        <h3>Automatic Reconciliation</h3>
+                        <p>Lottery reconciliation that runs automatically, eliminating manual counting errors and cash discrepancies.</p>
+                    </div>
+                    <div class="feat-card">
+                        <div class="feat-icon-wrap" style="background:rgba(16,185,129,0.12);">
+                            <span style="position:relative;z-index:1;">🎟️</span>
+                        </div>
+                        <h3>Real-Time Sales Tracking</h3>
+                        <p>Real-time lottery sales tracking visible across all your locations at once from any smart device.</p>
+                    </div>
+                </div>
+
+                <!-- Row 2: 4 icon feature cards -->
+                <div class="features-grid-bottom" style="margin-top:1.25rem;">
+                    <div class="feat-card">
+                        <div class="feat-icon-large">🤖</div>
+                        <h3>Automated Shift Reports</h3>
+                        <p>Automated shift reports emailed to you every shift with zero manual input required from staff.</p>
+                    </div>
+                    <div class="feat-card">
+                        <div class="feat-icon-large">🚨</div>
+                        <h3>Built-in Theft Prevention</h3>
+                        <p>Built-in lottery theft prevention alerts the moment any shift discrepancy or missing ticket is detected.</p>
+                    </div>
+                    <div class="feat-card">
+                        <div class="feat-icon-large">⚙️</div>
+                        <h3>Multi-Store Management</h3>
+                        <p>Manage all your locations from a single account with per-store staff role permissions.</p>
+                    </div>
+                    <div class="feat-card">
+                        <div class="feat-icon-large">☀️</div>
+                        <h3>All 50 States Coverage</h3>
+                        <p>Full support for all US lottery formats across all 50 states with 16/7 live tech support.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================== WHO USES LAI 5 ===================== -->
+        <section class="who-uses-section" style="background: #0d0d14; padding: 6rem 2rem; border-top: 1px solid rgba(255,255,255,0.05);">
+            <div class="section-max">
+                <h2 style="text-align: center; color: #fff; font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; margin-bottom: 2rem;">Built for Every Lottery Retailer - Any Store Type, All 50 States</h2>
+                <p style="text-align: center; color: #9CA3AF; font-size: 1.1rem; max-width: 900px; margin: 0 auto 4rem; line-height: 1.8;">
+                    LAI 5 is retail lottery software trusted by lottery operators across every store format in the US - from single-location independents to growing multi-location chains. Whether you sell lottery tickets at a gas station, liquor store, smoke shop, newsstand, grocery store, or pharmacy, LAI 5 gives every operator the same complete lottery management software platform that the largest chains rely on. Every operator gets the same platform the largest chains rely on - built so a single person can run a full shift close without a spreadsheet in sight. LAI 5's automated lottery tracking software handles the counting, the discrepancy checks, and the reports automatically. One platform, all 50 US states, no additional setup required.
+                </p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem;">
+                    <!-- Multi-Store CTA -->
+                    <div class="cta-block" style="background: rgba(139, 92, 246, 0.05); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 24px; padding: 3rem; text-align: center;">
+                        <h3 style="font-size: 1.8rem; color: #fff; margin-bottom: 1.2rem;">Running More Than One Store?</h3>
+                        <p style="color: #9CA3AF; margin-bottom: 2.5rem; line-height: 1.6;">LAI 5 brings every location into a single dashboard. One login, one platform, every store visible.</p>
+                        <a href="./features/multi-store/" class="btn-price" style="background: #8B5CF6; color: #fff; border-radius: 50px; padding: 1rem 2rem; display: inline-block; text-decoration: none; font-weight: 700;">See Multi-Store Features</a>
+                    </div>
+
+                    <!-- Who Uses LAI 5 CTA -->
+                    <div class="cta-block" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 3rem; text-align: center;">
+                        <h3 style="font-size: 1.8rem; color: #fff; margin-bottom: 1.2rem;">Solution Hub</h3>
+                        <p style="color: #9CA3AF; margin-bottom: 2.5rem; line-height: 1.6;">From single-location independents to growing chains, LAI 5 is the store inventory software that scales with your business in all 50 states.</p>
+                        <a href="./solutions/" class="btn-price-outline" style="border-radius: 50px; padding: 1rem 2rem; display: inline-block; text-decoration: none; border: 1.5px solid rgba(255,255,255,0.3); color: #fff; font-weight: 600;">See Who Uses LAI 5</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================== LOTTERY THEFT PREVENTION ===================== -->
+        <section class="theft-prevention-section" style="background: #0f0f18; padding: 6rem 2rem; border-top: 1px solid rgba(255,255,255,0.05);">
+            <div class="section-max">
+                <h2 style="text-align: center; color: #fff; font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; margin-bottom: 2rem;">Lottery Theft Prevention: The Average Retailer Loses $5,000 a Year. LAI 5 Catches What Others Miss.</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center;">
+                    <div style="color: #9CA3AF; font-size: 1.1rem; line-height: 1.8;">
+                        <p style="margin-bottom: 1.5rem;">Missing tickets. Unauthorized voids. Inventory discrepancies that only surface at month-end. These are the hidden costs draining lottery revenue from retail lottery operators every single day - and most owners do not catch them until the damage is done. Without software built to flag these gaps, every shift is an opportunity for errors and losses to accumulate undetected.</p>
+                        <p>LAI 5 monitors every lottery book from adding into inventory to final ticket sale. Any discrepancy - across any shift at any location - is logged for your review. Combined with real-time lottery sales tracking and multi-store lottery management, LAI 5 gives you full visibility over every dollar of lottery inventory every hour of the day. This is what real lottery theft prevention looks like inside a modern lottery management software platform.</p>
+                    </div>
+                    <div class="cta-block" style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 24px; padding: 3rem; text-align: center;">
+                        <h3 style="font-size: 1.8rem; color: #fff; margin-bottom: 1.2rem;">Catch Losses Before They Add Up</h3>
+                        <p style="color: #9CA3AF; margin-bottom: 2.5rem; line-height: 1.6;">LAI 5 watches every lottery book from activation to final sale and alerts you the moment something does not add up.</p>
+                        <a href="./solutions/theft-prevention/" class="btn-price" style="background: #ef4444; color: #fff; border-radius: 50px; padding: 1rem 2rem; display: inline-block; text-decoration: none; font-weight: 700;">Stop Lottery Theft Now</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================== SUPPORT ===================== -->
+        <section class="support-section" id="whylai">
+            <div class="section-max">
+                <h2>Real Support,<br>When You Need It</h2>
+                <p class="section-sub">We're your software team, ready to help when things get busy, break, or if you have questions. You run the store — we handle the rest.</p>
+                <div class="support-grid">
+                    <div class="support-card-left">
+                        <div class="lang-icons">🌐 💬 🤖</div>
+                        <div class="lang-text">English</div>
+                        <div style="color:rgba(255,255,255,0.7); font-size:1.1rem; margin-top:0.5rem;">हिन्दी · ગુજરાતી</div>
+                    </div>
+                    <div class="support-features">
+                        <div class="support-feature">
+                            <div class="support-check">✓</div>
+                            <div>
+                                <h4>16/7 Live Tech Support</h4>
+                                <p>Real help, 16 hours a day, 7 days a week. No bots. No extra fees. Just people who know the system.</p>
+                            </div>
+                        </div>
+                        <div class="support-feature">
+                            <div class="support-check">✓</div>
+                            <div>
+                                <h4>English · Hindi · Gujarati Support</h4>
+                                <p>Our team speaks English, Hindi, and Gujarati — so you always get help in the language you're most comfortable with. No confusion, no miscommunication.</p>
+                            </div>
+                        </div>
+                        <div class="support-feature">
+                            <div class="support-check">✓</div>
+                            <div>
+                                <h4>Remote Desktop Assistance</h4>
+                                <p>Our techs connect directly to your machine and fix the problem in minutes. No waiting. No back-and-forth.</p>
+                            </div>
+                        </div>
+                        <div class="support-feature">
+                            <div class="support-check" style="background:rgba(139,92,246,0.2); border-color:rgba(139,92,246,0.5);">🤖</div>
+                            <div>
+                                <h4>AI Chatbot &amp; Voice Assistant — 24/7</h4>
+                                <p>Built right into the app, the LAI 5 AI chatbot and voice assistant are available around the clock — answer questions, guide your staff, and resolve issues instantly. No wait time, no hold music, any time of day or night.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================== PRICING ===================== -->
+        <section class="pricing-section" id="pricing">
+            <div class="section-max">
+                <h2>Simple, Transparent Pricing</h2>
+                <p class="section-sub">No hidden fees. No surprise costs. Pick the plan that fits your store.</p>
+                <div class="pricing-toggle">
+                    <div class="toggle-pill">
+                        <button class="toggle-btn active" id="btn-monthly" onclick="setPricing('monthly')">Monthly</button>
+                        <button class="toggle-btn" id="btn-annual" onclick="setPricing('annual')">Annual &minus;15%</button>
+                    </div>
+                </div>
+                <div class="pricing-grid">
+                    <!-- Trial -->
+                    <div class="price-card">
+                        <div class="plan-name">Trial Plan</div>
+                        <div class="price-amount">Free</div>
+                        <div class="price-period">30-day free trial</div>
+                        <hr class="price-divider">
+                        <ul class="price-features">
+                            <li>You get LAI 5</li>
+                            <li>Free technical support</li>
+                            <li>Free RTN POS Access</li>
+                            <li>30-Day RTN Display Trial – on request</li>
+                            <li>Built-In Accounting</li>
+                            <li>Works on Any Smart Device</li>
+                            <li>Automated Shift Reports</li>
+                            <li>Cloud Data Access</li>
+                            <li>16/7 Remote Support</li>
+                        </ul>
+                        <a href="registration.html" class="btn-price">Try for free</a>
+                    </div>
+                    <!-- LAI V -->
+                    <div class="price-card">
+                        <div class="plan-name">LAI V</div>
+                        <div class="price-amount" id="price-smart">$39.99</div>
+                        <div class="price-period" id="period-smart">/month &nbsp;·&nbsp; <span id="yearly-smart" style="display:none; color:#A78BFA; font-weight:700;">$299.99/yr</span><span id="monthly-smart">billed monthly</span></div>
+                        <hr class="price-divider">
+                        <ul class="price-features">
+                            <li>You get LAI 5</li>
+                            <li>Free technical support</li>
+                            <li>Free RTN POS Access</li>
+                            <li>30-Day RTN Display Trial</li>
+                            <li>Built-In Accounting</li>
+                            <li>Works on Any Smart Device</li>
+                            <li>Automated Shift Reports</li>
+                            <li>Cloud Data Access</li>
+                            <li>16/7 Remote Support</li>
+                        </ul>
+                        <a href="registration.html" class="btn-price btn-price-outline">Select plan</a>
+                    </div>
+                    <!-- LAI Pro -->
+                    <div class="price-card featured">
+                        <div class="plan-name" style="color:#A78BFA;">LAI Pro</div>
+                        <div class="price-amount" id="price-enterprise">$59.99</div>
+                        <div class="price-period" id="period-enterprise">/month &nbsp;·&nbsp; <span id="yearly-enterprise" style="display:none; color:#A78BFA; font-weight:700;">$599.99/yr</span><span id="monthly-enterprise">billed monthly</span></div>
+                        <div style="display:inline-block; background:rgba(139,92,246,0.15); color:#A78BFA; padding:0.25rem 0.75rem; border-radius:4px; font-size:0.8rem; font-weight:700; margin-bottom:0.5rem;">Combo Offer: 25% off LAI Pro</div>
+                        <hr class="price-divider">
+                        <ul class="price-features">
+                            <li>Everything in LAI V</li>
+                            <li>Hot &amp; Cold Numbers</li>
+                            <li>Store Analytics</li>
+                            <li>100% Custom UI + Free POS</li>
+                            <li>RTN Digital Display included</li>
+                            <li>16/7 Remote Support</li>
+                        </ul>
+                        <a href="registration.html" class="btn-price">Select plan</a>
+                        <p class="or-contact">or <a href="#contact">contact sales</a></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================== FAQ ===================== -->
+        <section class="faq-section-new" id="faq">
+            <div class="section-max">
+                <p class="section-label" style="text-align:center;">Got Questions?</p>
+                <h2 style="text-align:center; font-size:clamp(2rem,4vw,3rem); font-weight:800; color:var(--text-main); margin:0 auto 1rem; max-width:700px;">Frequently Asked Questions</h2>
+                <p style="text-align:center; color:#9CA3AF; font-size:1.05rem; max-width:580px; margin:0 auto 3.5rem; line-height:1.7;">About LAI 5 Lottery Management Software</p>
+
+                <div class="faq-list">
+
+                    <div class="faq-item-new">
+                        <button class="faq-btn-new" aria-expanded="false">
+                            <span>What is LAI 5 lottery management software?</span>
+                            <span class="faq-chevron">&#8964;</span>
+                        </button>
+                        <div class="faq-body">
+                            <p>LAI 5 is lottery management software built specifically for retail lottery operators - gas stations, liquor stores, smoke shops, newsstands, grocery stores, and any business that sells instant lottery tickets. It replaces manual tracking with an AI lottery software system that handles inventory, reconciliation, theft alerts, and shift reports automatically. LAI 5 runs on Windows, Android, and iOS simultaneously and supports operations across all 50 states.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item-new">
+                        <button class="faq-btn-new" aria-expanded="false">
+                            <span>How does the lottery tracking software work?</span>
+                            <span class="faq-chevron">&#8964;</span>
+                        </button>
+                        <div class="faq-body">
+                            <p>LAI 5 lottery tracking software works in three steps at the end of every shift:<br><br><strong>1. Scan</strong> - Staff scan ending ticket numbers using the LAI 5 wireless scanner or smartphone camera. The system logs each scan and updates your lottery inventory management database instantly.<br><strong>2. Analyze</strong> - The AI engine reviews scan data, flags any discrepancies for lottery theft prevention, and generates real-time lottery sales tracking data across all your games.<br><strong>3. Report</strong> - Complete automated shift reports - total sales, money drops, inventory status, and alerts - are emailed to you automatically within seconds. No manual input required.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item-new">
+                        <button class="faq-btn-new" aria-expanded="false">
+                            <span>What platforms does LAI 5 run on?</span>
+                            <span class="faq-chevron">&#8964;</span>
+                        </button>
+                        <div class="faq-body">
+                            <p>LAI 5 runs on Windows desktops and laptops, Android smartphones and tablets, and iPhones and iPads. As a cloud-based retail lottery software platform, the full dashboard is accessible from any modern web browser - no installation required for mobile access. This cross-platform flexibility means you can manage your multi-store lottery management operations from any device, anywhere in the world, 24 hours a day.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item-new">
+                        <button class="faq-btn-new" aria-expanded="false">
+                            <span>Does LAI 5 help with lottery theft prevention?</span>
+                            <span class="faq-chevron">&#8964;</span>
+                        </button>
+                        <div class="faq-body">
+                            <p>Yes - lottery theft prevention is a core function of LAI 5, not an add-on. The system tracks every lottery book from activation to final sale across every shift. Any missing ticket, unauthorized void, or inventory discrepancy triggers an immediate alert to your phone and email. Every employee login is timestamped, creating a complete audit trail. Lottery retailers using LAI 5 for lottery theft prevention report eliminating shift shortages within their first 30 days of use - across all store types.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item-new">
+                        <button class="faq-btn-new" aria-expanded="false">
+                            <span>Can LAI 5 manage multiple store locations?</span>
+                            <span class="faq-chevron">&#8964;</span>
+                        </button>
+                        <div class="faq-body">
+                            <p>Yes. Multi-store lottery management is built into LAI 5. View all locations from a single dashboard, compare real-time lottery sales tracking data across stores, set individual theft alerts per location, and assign staff roles by store. Each location requires its own subscription, but all reporting and management runs through one login - whether you operate two locations or twenty. LAI 5 is one of the most flexible lottery management software solutions available for growing retail lottery operators of any type.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item-new">
+                        <button class="faq-btn-new" aria-expanded="false">
+                            <span>Does LAI 5 work as lottery software in all 50 states?</span>
+                            <span class="faq-chevron">&#8964;</span>
+                        </button>
+                        <div class="faq-body">
+                            <p>Yes. LAI 5 is lottery software that works across all 50 states - compatible with every instant lottery ticket format currently in use across the US. Whether you run a gas station in Texas, a liquor store in Florida, a smoke shop in New York, or any other retail lottery operation anywhere in the country, the same LAI 5 platform works identically without any state-specific configuration. LAI 5 is active across all 50 states - making it one of the broadest-coverage lottery tracking software platforms available to US lottery retailers today.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item-new">
+                        <button class="faq-btn-new" aria-expanded="false">
+                            <span>What if I need help with my account or subscription?</span>
+                            <span class="faq-chevron">&#8964;</span>
+                        </button>
+                        <div class="faq-body">
+                            <p>Support is available through the LAI 5 customer portal. You can reset your password directly from the login page, upgrade or change your subscription plan at any time, submit a support ticket for billing or account issues, or access setup guides and FAQs in the help center. Most requests are handled within one business day.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item-new">
+                        <button class="faq-btn-new" aria-expanded="false">
+                            <span>What makes LAI 5 different from other lottery software?</span>
+                            <span class="faq-chevron">&#8964;</span>
+                        </button>
+                        <div class="faq-body">
+                            <p>Most lottery software stores your data. LAI 5 acts on it. The system analyzes trends, identifies which games need restocking, and provides proactive theft detection. LAI 5 also combines inventory management, reconciliation, theft detection, and ITVM integration in one solution - running on Windows, Android, and iOS (Mac not supported). Digital display features are available via the optional RTN Display add-on. That is why 10,000+ retailers across all 50 states choose LAI 5 over every alternative.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+    <!-- ===================== FOOTER CTA ===================== -->
+    <footer class="footer-cta" id="contact">
+        <div class="footer-inner">
+            <!-- Brand col -->
+            <div>
+                <a href="#" class="footer-brand" style="margin-bottom:1rem;">
+                    <div class="pie-icon">🥧</div>
+                    <span><strong>RTN</strong> <span style="color:#A78BFA;">LAI 5</span></span>
+                </a>
+                <p style="color:#6B7280; font-size:0.85rem; max-width:200px; line-height:1.6;">AI-powered lottery management for every C-store in America.</p>
+            </div>
+            <!-- CTA col -->
+            <div class="footer-cta-center">
+                <h2>Ready to Scale Your Lottery Business?</h2>
+                <p style="color: #9CA3AF; margin-bottom: 2rem;">Start a 30-day free trial and see how LAI 5 fits your store. No credit card required.</p>
+                <div class="footer-cta-buttons">
+                    <a href="registration.html" class="btn-lavender">Start 30-Day Free Trial</a>
+                    <a href="mailto:support@realnetworking.com" class="btn-footer-outline">Book a Demo</a>
+                </div>
+            </div>
+            <!-- Links col -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:3rem;">
+                <div class="footer-nav">
+                    <h4>Explore</h4>
+                    <ul>
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="/features/multi-store/">Multi-Store</a></li>
+                        <li><a href="/solutions/theft-prevention/">Theft Prevention</a></li>
+                        <li><a href="/industries/">Who Uses LAI 5?</a></li>
+                        <li><a href="#pricing">Pricing</a></li>
+                    </ul>
+                </div>
+                <div class="footer-contact">
+                    <h4>Contact</h4>
+                    <p><a href="mailto:admin@realtnetworking.com">admin@realtnetworking.com</a></p>
+                    <p><a href="mailto:support@realtnetworking.com">support@realtnetworking.com</a></p>
+                    <p><a href="tel:18553961776">1-855-396-1776</a></p>
+                    <p><a href="tel:14783961776">1-478-396-1776</a></p>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2025 RTN LAI 5. All rights reserved.</p>
+            <div>
+                <a href="./privacy.html">Privacy Policy</a>
+                <a href="./terms.html">Terms of Service</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- D3 + TopoJSON for accurate USA map -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+    <script>
+        // ---- USA MAP (D3 Albers projection) ----
+        (function initUSAMap() {
+            const svgEl = document.getElementById('usa-map-svg');
+            if (!svgEl) return;
+            const strokeColor = 'rgba(139, 92, 246, 0.75)';
+            const fillColor   = 'rgba(13, 13, 20, 0.01)';
+
+            fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-albers-10m.json')
+                .then(r => r.json())
+                .then(us => {
+                    const svg     = d3.select('#usa-map-svg');
+                    const projection = d3.geoIdentity().reflectY(false);
+                    const pathGen = d3.geoPath();
+
+                    // States
+                    svg.selectAll('path.state')
+                        .data(topojson.feature(us, us.objects.states).features)
+                        .join('path')
+                        .attr('class', 'state')
+                        .attr('d', pathGen)
+                        .attr('fill', fillColor)
+                        .attr('stroke', strokeColor)
+                        .attr('stroke-width', 0.8)
+                        .attr('stroke-linejoin', 'round');
+
+                    // Nation border (outer coastline)
+                    svg.append('path')
+                        .datum(topojson.mesh(us, us.objects.nation))
+                        .attr('d', pathGen)
+                        .attr('fill', 'none')
+                        .attr('stroke', strokeColor)
+                        .attr('stroke-width', 1.6)
+                        .attr('stroke-linejoin', 'round');
+                })
+                .catch(() => {
+                    // Fallback: show simple text if CDN blocked
+                    svgEl.innerHTML = '<text x="480" y="300" text-anchor="middle" fill="rgba(139,92,246,0.5)" font-size="18">50 States · All covered</text>';
+                });
+        })();
+
+        // FAQ Accordion logic moved to landing.js
+    </script>
+    <script>
+        // Pricing toggle
+        const prices = {
+            monthly:  { smart: '$39.99', enterprise: '$59.99' },
+            annual:   { smart: '$24.99', enterprise: '$49.99' }
+        };
+        function setPricing(plan) {
+            const isAnnual = plan === 'annual';
+            document.getElementById('price-smart').textContent = prices[plan].smart;
+            document.getElementById('price-enterprise').textContent = prices[plan].enterprise;
+            document.getElementById('yearly-smart').style.display      = isAnnual ? 'inline' : 'none';
+            document.getElementById('monthly-smart').style.display     = isAnnual ? 'none'   : 'inline';
+            document.getElementById('yearly-enterprise').style.display = isAnnual ? 'inline' : 'none';
+            document.getElementById('monthly-enterprise').style.display= isAnnual ? 'none'   : 'inline';
+            document.getElementById('btn-monthly').classList.toggle('active', !isAnnual);
+            document.getElementById('btn-annual').classList.toggle('active',  isAnnual);
+        }
+
+        // Reveal animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('active'); });
+        }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+        document.querySelectorAll('.feat-card, .testi-card, .price-card, .support-feature').forEach(el => {
+            el.classList.add('reveal');
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deleted Registrations Audit | RTN LAI 5</title>
+    <link rel="stylesheet" href="./css/global.css">
+    <link rel="stylesheet" href="./css/admin.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <div class="header-title">
+                <h1>Deleted Audit Log</h1>
+                <p>Archival history of removed accounts</p>
+            </div>
+            <button class="btn-admin" onclick="window.close()">Back to Dashboard</button>
+        </header>
+
+        <div class="table-container">
+            <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Store Name</th>
+                    <th>Customer Info</th>
+                    <th>Reason</th>
+                    <th>Deleted By</th>
+                    <th>Deleted At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="deleted-list"></tbody>
+        </table>
+    </div>
+</div>
+
+
+    <!-- Details Modal -->
+    <div id="details-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="modal-title" style="margin-bottom:2rem; color:var(--primary);">Registration Details</h2>
+            <div id="modal-body" class="modal-grid"></div>
+            <button class="btn-admin" style="margin-top:2rem;" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001';
+        let currentUserRole = '';
+
+        async function fetchDeleted() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/deleted-registrations`, { credentials: 'include' });
+                const data = await resp.json();
+                if (data.success) {
+                    currentUserRole = data.currentRole;
+                    const tbody = document.getElementById('deleted-list');
+                    tbody.innerHTML = data.deleted.map(d => {
+                        const canRestore = currentUserRole === 'admin';
+                        return `
+                        <tr>
+                            <td style="font-weight:600;">${d.store_name}</td>
+                            <td>${d.first_name} ${d.last_name}<br><span style="font-size:0.75rem; opacity:0.5;">ID: ${d.shop_id}</span></td>
+                            <td style="max-width:200px; font-style:italic; font-size:0.85rem; color:#8B5CF6;">${d.deletion_reason || '--'}</td>
+                            <td><span style="color:#EF4444; font-weight:700;">${d.deleted_by_name}</span></td>
+                            <td style="font-size:0.85rem; opacity:0.8;">${new Date(d.deleted_at.replace(' ', 'T')).toLocaleString()}</td>
+                            <td>
+                                <button class="btn-admin" onclick='viewDetails(${JSON.stringify(d.full_data_json).replace(/'/g, "&apos;")})'>Details</button>
+                                ${canRestore ? `<button class="btn-admin" style="background:rgba(16, 185, 129, 0.1); color:#10B981;" onclick="restoreRegistration(${d.id})">Restore</button>` : ''}
+                            </td>
+                        </tr>
+                    `}).join('') || '<tr><td colspan="5" style="text-align:center; padding:2rem; opacity:0.5;">No deletion records found.</td></tr>';
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function restoreRegistration(deletedId) {
+            if (!confirm('Are you sure you want to RESTORE this registration to the active list?')) return;
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/registrations/restore/${deletedId}`, { 
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    alert('Registration restored successfully!');
+                    fetchDeleted();
+                } else {
+                    alert(data.error || 'Restore failed');
+                }
+            } catch (err) {
+                alert('Connection error');
+            }
+        }
+
+        function viewDetails(jsonData) {
+            const data = typeof jsonData === 'string' ? JSON.parse(jsonData) : jsonData;
+            const body = document.getElementById('modal-body');
+            document.getElementById('modal-title').textContent = data.store_name || 'Registration Details';
+            
+            body.innerHTML = Object.entries(data).map(([key, val]) => `
+                <div class="data-item">
+                    <div class="data-label">${key.replace(/_/g, ' ')}</div>
+                    <div class="data-value">${val || '--'}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('details-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('details-modal').style.display = 'none';
+        }
+
+        fetchDeleted();
+    </script>
+</body>
+</html>

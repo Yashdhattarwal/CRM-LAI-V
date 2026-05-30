@@ -1,0 +1,21 @@
+{
+  "name": "rtnlai-server",
+  "version": "1.0.0",
+  "description": "RTN LAI 5 – Registration & Login API Server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.18.3",
+    "express-session": "^1.18.0",
+    "multer": "^2.1.1",
+    "nodemailer": "^8.0.5",
+    "pdfkit": "^0.18.0",
+    "pdfkit-table": "^0.1.99",
+    "sql.js": "^1.11.0"
+  }
+}

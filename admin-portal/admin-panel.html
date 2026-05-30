@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | RTN LAI 5</title>
+    <link rel="stylesheet" href="./css/global.css">
+    <link rel="stylesheet" href="./css/admin.css">
+</head>
+<body>
+    <div class="loading-overlay" id="loading">Loading...</div>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <div class="header-title">
+                <h1>Admin Dashboard</h1>
+                <p>Register monitoring & state-wise registries</p>
+            </div>
+            <div style="display:flex; align-items:center; gap:2rem;">
+                <div style="text-align: right; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 2rem;">
+                    <div style="color: #8B5CF6; font-weight: 700;" id="display-fullname">Loading...</div>
+                    <div style="font-size:0.8rem; opacity:0.6;"><span id="display-username"></span> • <span id="display-email"></span></div>
+                </div>
+                <div class="dropdown-settings" style="position: relative;">
+                    <button class="btn-admin-actions" onclick="toggleSettingsDropdown(event)" style="background: rgba(255,255,255,0.03); color: #fff; border-color: rgba(255,255,255,0.1); padding: 0.6rem 1.2rem; border-radius: 12px; font-weight: 700;">
+                        🎛️ Control Center <span style="font-size: 0.65rem; margin-left: 4px;">▼</span>
+                    </button>
+                    <div class="dropdown-menu" id="settings-dropdown" style="right: 0; left: auto; min-width: 185px;">
+                        <a href="https://docs.google.com/spreadsheets/d/1xD-lCB3R6Xj1V00sZe2tN88d7HRDJtKaN-_L1G3gxUo/edit?usp=sharing" target="_blank" style="color: #10B981; font-weight: 600;">📊 Google Sheet</a>
+                        <a href="#" onclick="openEmpLogsModal(); event.preventDefault();">📋 View Logs</a>
+                        <a href="#" id="menu-staff-mgmt" style="display:none;" onclick="openStaffModal(); event.preventDefault();">👥 Manage Staff</a>
+                        <a href="#" id="menu-del-hist" style="display:none;" onclick="window.open('deleted-history.html', '_blank'); event.preventDefault();">🗑️ Deleted History</a>
+                        <div style="border-top: 1px solid rgba(255,255,255,0.08); margin: 4px 0;"></div>
+                        <a href="#" onclick="logout(); event.preventDefault();" style="color: #EF4444;">🚪 Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card"><h3>Total</h3><div class="value" id="stat-total">0</div></div>
+            <div class="stat-card active-kpi"><h3>Active</h3><div class="value" id="stat-active" style="color: #10B981;">0</div></div>
+            <div class="stat-card"><h3>Inactive</h3><div class="value" id="stat-inactive" style="color: #EF4444;">0</div></div>
+        </div>
+
+        <div class="filter-panel">
+            <div class="filter-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <input type="text" id="f-fname" placeholder="Search by First Name" class="input-control">
+                <input type="text" id="f-lname" placeholder="Search by Last Name" class="input-control">
+                <input type="text" id="f-city" placeholder="Search by Shop City" class="input-control">
+                <input type="text" id="f-state" placeholder="Search by Shop State" class="input-control">
+                
+                <input type="text" id="f-user" placeholder="Search by User Name" class="input-control">
+                <input type="text" id="f-shopemail" placeholder="Search by Shop Email" class="input-control">
+                <input type="text" id="f-useremail" placeholder="Search by User Email" class="input-control">
+                <input type="text" id="f-phone" placeholder="Search by Phone Number" class="input-control">
+                
+                <input type="text" id="f-shopid" placeholder="Search by Shop Id" class="input-control">
+                <input type="text" id="f-product" placeholder="Search by Product name" class="input-control">
+                <input type="text" id="f-plan" placeholder="Search by Plan" class="input-control">
+                <select id="f-status" class="input-control">
+                    <option value="">All Statuses</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button class="btn-admin" onclick="resetFilters()">Reset</button>
+                <button class="btn-admin-primary" onclick="fetchUsers()">Search</button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>SL NO</th>
+                        <th>ACTIONS</th>
+                        <th>FIRST NAME</th>
+                        <th>LAST NAME</th>
+                        <th>USER NAME</th>
+                        <th>PASSCODE</th>
+                        <th>ADDRESS</th>
+                        <th>ZIP</th>
+                        <th>USER EMAIL ID</th>
+                        <th>PHONE NUMBER</th>
+                        <th>SHOP ID</th>
+                        <th>SHOP EMAIL ID</th>
+                        <th>REGISTERED DATE</th>
+                        <th>EXPIRY DATE</th>
+                        <th>LOCATION NAME</th>
+                        <th>LEGAL NAME</th>
+                        <th>APP NAME</th>
+                        <th>RTN PLAN</th>
+                        <th>STATUS</th>
+                        <th>CARD NUMBER</th>
+                        <th>ACCOUNT NUMBER</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <tr><td colspan="17" style="text-align:center; padding:4rem; opacity:0.5;">Load data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="edit-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-bottom:2rem;">Edit Registration</h2>
+            <div id="modal-fields-container" class="modal-grid"></div>
+            <div style="margin-top:2rem; display:flex; justify-content:space-between; align-items: center; gap:1rem;">
+                <button class="btn-admin" id="modal-delete-btn" style="background:rgba(239,68,68,0.1); color:#EF4444; border-color:rgba(239,68,68,0.2); display:none;" onclick="deleteRegistration(currentRegId)">Delete Permanent</button>
+                <div style="display:flex; gap:1rem;">
+                    <button class="btn-admin" onclick="closeModal('edit-modal')">Cancel</button>
+                    <button class="btn-admin-primary" onclick="saveEdit()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="staff-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-bottom:2rem;">Staff Management</h2>
+            <div class="modal-grid" style="grid-template-columns: 1fr 1fr;">
+                <div>
+                    <h3>Add Staff</h3>
+                    <form onsubmit="createStaff(event)" style="margin-top:1rem;">
+                        <input type="text" id="new-staff-user" placeholder="Username" class="input-control" style="margin-bottom:1rem;" required>
+                        <input type="email" id="new-staff-email" placeholder="Email" class="input-control" style="margin-bottom:1rem;" required>
+                        <input type="password" id="new-staff-pass" placeholder="Password" class="input-control" style="margin-bottom:1rem;" required>
+                        <select id="new-staff-role" class="input-control" style="margin-bottom:1rem;">
+                            <option value="employee">Employee</option>
+                            <option value="manager">Manager</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        <button type="submit" class="btn-admin-primary" style="width:100%;">Create</button>
+                    </form>
+                </div>
+                <div>
+                    <h3>Current Staff</h3>
+                    <div id="staff-list" style="margin-top:1rem; max-height:300px; overflow-y:auto;"></div>
+                </div>
+            </div>
+            <button class="btn-admin" style="margin-top:2rem;" onclick="closeModal('staff-modal')">Close</button>
+        </div>
+    </div>
+
+    <div id="purchase-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 980px; width: 95%;">
+            <h2 style="margin-bottom:1.5rem;">Purchase History: <span id="purchase-cust-name" style="color:#3B82F6;"></span></h2>
+            
+            <div class="modal-grid" style="grid-template-columns: 1.2fr 1fr; gap: 2rem;">
+                <!-- Left side: List of Purchases -->
+                <div>
+                    <h3 style="margin-bottom: 1rem; font-size: 1rem; color: #8B5CF6;">📜 Recorded Purchases</h3>
+                    <div id="purchase-history-list" style="max-height:450px; overflow-y:auto; background:rgba(255,255,255,0.01); border-radius:12px; padding:1rem; border: 1px solid rgba(255,255,255,0.05);">
+                        <!-- Purchase records rendered here -->
+                    </div>
+                </div>
+
+                <!-- Right side: Add Purchase Form -->
+                <div>
+                    <h3 style="margin-bottom: 1rem; font-size: 1rem; color: #10B981;">🆕 Add New Purchase</h3>
+                    <div style="background: rgba(255,255,255,0.02); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                        <!-- Product Selection -->
+                        <div style="margin-bottom: 1rem;">
+                            <label style="font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.6); display: block; margin-bottom: 0.5rem; text-transform: uppercase;">📶 Choose Product</label>
+                            <select id="p-product" class="input-control">
+                                <option value="Wifi Scanner">📶 Wifi Scanner</option>
+                                <option value="Display Scanner">📺 Display Scanner</option>
+                                <option value="Android Box">📦 Android Box</option>
+                            </select>
+                        </div>
+
+                        <!-- Quantity -->
+                        <div style="margin-bottom: 1rem;">
+                            <label style="font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.6); display: block; margin-bottom: 0.5rem; text-transform: uppercase;">🔢 Quantity</label>
+                            <input type="number" id="p-qty" min="1" value="1" class="input-control">
+                        </div>
+
+                        <!-- Payment Mode -->
+                        <div style="margin-bottom: 1rem;">
+                            <label style="font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.6); display: block; margin-bottom: 0.5rem; text-transform: uppercase;">💳 Mode of Payment</label>
+                            <select id="p-payment-mode" class="input-control" onchange="togglePaymentFields()">
+                                <option value="Card">💳 Credit / Debit Card</option>
+                                <option value="e-Cheque">📄 e-Cheque</option>
+                            </select>
+                        </div>
+
+                        <!-- Conditional: Card details -->
+                        <div id="p-card-fields" style="background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid rgba(255,255,255,0.03);">
+                            <div style="margin-bottom: 0.75rem;">
+                                <label style="font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.5); display: block; margin-bottom: 0.25rem;">CARD NUMBER</label>
+                                <input type="text" id="p-card-no" class="input-control" placeholder="1234 5678 9876 5432">
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                                <div>
+                                    <label style="font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.5); display: block; margin-bottom: 0.25rem;">EXPIRY</label>
+                                    <input type="text" id="p-card-exp" class="input-control" placeholder="MM/YY">
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.5); display: block; margin-bottom: 0.25rem;">CVV</label>
+                                    <input type="text" id="p-card-cvv" class="input-control" placeholder="***">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Conditional: e-Cheque details -->
+                        <div id="p-cheque-fields" style="display: none; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid rgba(255,255,255,0.03);">
+                            <label style="font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.5); display: block; margin-bottom: 0.5rem;">📸 UPLOAD CHEQUE IMAGE</label>
+                            <input type="file" id="p-cheque-image" class="input-control" accept="image/*" style="padding-top: 8px;">
+                        </div>
+
+                        <button class="btn-admin-primary" onclick="addPurchase()" style="width: 100%; margin-top: 0.5rem; gap: 6px;">
+                            💾 Record Purchase
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="btn-admin" style="margin-top:2rem;" onclick="closeModal('purchase-modal')">Close</button>
+        </div>
+    </div>
+
+    <div id="support-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-bottom:1.5rem;">Support Log: <span id="support-cust-name" style="color:#8B5CF6;"></span></h2>
+            <div class="modal-grid" style="grid-template-columns: 1.5fr 1fr;">
+                <div id="comment-list" style="max-height:400px; overflow-y:auto;"></div>
+                <div>
+                    <div style="margin-bottom:1rem;">
+                        <input type="text" id="caller-number" placeholder="Caller Number (Required)" class="input-control" required>
+                    </div>
+                    <div style="margin-bottom:1rem;">
+                        <textarea id="new-comment" class="input-control" placeholder="Note..." style="height:150px; margin-bottom:1rem;"></textarea>
+                    </div>
+                    <div style="margin-bottom:1rem;">
+                        <label style="font-size:0.8rem; opacity:0.8; display:block; margin-bottom:5px;">Attach File (Image/PDF):</label>
+                        <input type="file" id="support-file" class="input-control" accept="image/*,.pdf" style="padding-top:8px;">
+                    </div>
+                    <button class="btn-admin-primary" onclick="addComment()" style="width:100%;">Post Note</button>
+                </div>
+            </div>
+            <button class="btn-admin" style="margin-top:2rem;" onclick="closeModal('support-modal')">Close</button>
+        </div>
+    </div>
+
+    <div id="emp-logs-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 1000px; width: 90%;">
+            <h2 style="margin-bottom:1.5rem;">Collective Employee Logs</h2>
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <label style="font-size: 0.9rem; opacity: 0.8;">From:</label>
+                    <input type="date" id="emp-log-start-date" class="input-control" style="width: auto;">
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <label style="font-size: 0.9rem; opacity: 0.8;">To:</label>
+                    <input type="date" id="emp-log-end-date" class="input-control" style="width: auto;">
+                </div>
+                <button class="btn-admin-primary" onclick="filterEmpLogs()" style="padding: 10px 20px;">Filter</button>
+                <button class="btn-admin" onclick="clearEmpLogsFilter()" style="padding: 10px 20px;">Clear</button>
+            </div>
+            <div class="modal-grid" style="grid-template-columns: 250px 1fr; gap: 1.5rem;">
+                <div>
+                    <h3 style="margin-bottom:1rem; opacity:0.8;">Employees</h3>
+                    <div id="emp-logs-staff-list" style="max-height:400px; overflow-y:auto; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 0.5rem;">
+                        <!-- Staff list rendered here -->
+                    </div>
+                </div>
+                <div>
+                    <h3 style="margin-bottom:1rem; opacity:0.8;">Logs for: <span id="emp-logs-selected-staff" style="color:#8B5CF6;">None</span></h3>
+                    <div id="emp-logs-list" style="max-height:400px; overflow-y:auto; background: rgba(255,255,255,0.01); border-radius: 12px; padding: 1rem;">
+                        <div style="opacity:0.5; text-align:center; padding:2rem;">Select an employee to view logs</div>
+                    </div>
+                </div>
+            </div>
+            <button class="btn-admin" style="margin-top:2rem;" onclick="closeModal('emp-logs-modal')">Close</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.port === '3001' ? '' : 'http://localhost:3001';
+        let allUsers = [];
+        let currentRegId = null;
+        let currentUserId = null;
+
+        async function checkAuth() {
+            const resp = await fetch(`${API_BASE}/api/admin/me`, { credentials: 'include' });
+            const data = await resp.json();
+            if (!data.loggedIn) return window.location.href = 'admin-login.html';
+            currentUserId = data.userId;
+            document.getElementById('display-fullname').textContent = data.name;
+            document.getElementById('display-username').textContent = data.username;
+            document.getElementById('display-email').textContent = data.email;
+            if (data.role === 'admin') {
+                const staffEl = document.getElementById('menu-staff-mgmt');
+                const delEl = document.getElementById('menu-del-hist');
+                if (staffEl) staffEl.style.display = 'block';
+                if (delEl) delEl.style.display = 'block';
+            }
+            document.body.setAttribute('data-role', data.role);
+        }
+        async function openEmpLogsModal() {
+            document.getElementById('emp-logs-modal').style.display = 'flex';
+            await fetchEmpLogsStaff();
+        }
+
+        async function fetchEmpLogsStaff() {
+            const resp = await fetch(`${API_BASE}/api/admin/staff`, { credentials: 'include' });
+            const staff = await resp.json();
+            document.getElementById('emp-logs-staff-list').innerHTML = staff.map(s => `
+                <div style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: background 0.2s;" 
+                     onclick="selectEmpForLogs(${s.id}, '${s.username}')" 
+                     onmouseover="this.style.background='rgba(255,255,255,0.05)'" 
+                     onmouseout="this.style.background='transparent'">
+                    <span style="font-weight:600; color:#fff;">${s.first_name || s.username} ${s.last_name || ''}</span>
+                    <div style="font-size:0.75rem; opacity:0.5;">${s.role}</div>
+                </div>
+            `).join('') || '<div style="opacity:0.5; text-align:center; padding:1rem;">No employees found</div>';
+        }
+
+        let selectedEmpIdForLogs = null;
+
+        async function selectEmpForLogs(staffId, staffName) {
+            selectedEmpIdForLogs = staffId;
+            document.getElementById('emp-logs-selected-staff').textContent = staffName;
+            await fetchEmpLogs();
+        }
+
+        async function fetchEmpLogs() {
+            if (!selectedEmpIdForLogs) return;
+            const startDate = document.getElementById('emp-log-start-date').value;
+            const endDate = document.getElementById('emp-log-end-date').value;
+            
+            let url = `${API_BASE}/api/admin/support-comments-by-staff/${selectedEmpIdForLogs}`;
+            const params = [];
+            if (startDate) params.push(`startDate=${startDate}`);
+            if (endDate) params.push(`endDate=${endDate}`);
+            if (params.length) url += `?${params.join('&')}`;
+            
+            const resp = await fetch(url, { credentials: 'include' });
+            const data = await resp.json();
+            
+            document.getElementById('emp-logs-list').innerHTML = data.logs.map(c => `
+                <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:12px; margin-bottom:1rem; position:relative;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; opacity:0.5; margin-bottom:5px;">
+                        <span style="font-weight: 600; color: #8B5CF6;">${c.store_name || 'Customer ID: '+c.registration_id}</span>
+                        <span>${new Date(c.created_at).toLocaleString()}</span>
+                    </div>
+                    ${c.caller_number ? `<div style="font-size:0.75rem; color:#10B981; margin-bottom:5px;">Caller: ${c.caller_number}</div>` : ''}
+                    <div style="color:rgba(255,255,255,0.9); line-height:1.4;">${c.comment}</div>
+                </div>
+            `).join('') || '<div style="opacity:0.5; text-align:center; padding:2rem;">No logs found for this period</div>';
+        }
+
+        function filterEmpLogs() {
+            fetchEmpLogs();
+        }
+
+        function clearEmpLogsFilter() {
+            document.getElementById('emp-log-start-date').value = '';
+            document.getElementById('emp-log-end-date').value = '';
+            fetchEmpLogs();
+        }
+
+        async function fetchStats() {
+            const resp = await fetch(`${API_BASE}/api/admin/stats`, { credentials: 'include' });
+            const d = await resp.json();
+            document.getElementById('stat-total').textContent = d.total;
+            document.getElementById('stat-active').textContent = d.active;
+            document.getElementById('stat-inactive').textContent = d.inactive;
+        }
+
+        async function fetchUsers() {
+            document.getElementById('loading').style.display = 'block';
+            const getVal = (id) => document.getElementById(id)?.value || '';
+            const params = new URLSearchParams({
+                firstName: getVal('f-fname'),
+                lastName: getVal('f-lname'),
+                corporation: getVal('f-corp'),
+                shopCity: getVal('f-city'),
+                shopState: getVal('f-state'),
+                userName: getVal('f-user'),
+                shopEmail: getVal('f-shopemail'),
+                userEmail: getVal('f-useremail'),
+                phone: getVal('f-phone'),
+                shopId: getVal('f-shopid'),
+                product: getVal('f-product'),
+                plan: getVal('f-plan'),
+                status: getVal('f-status')
+            });
+            const resp = await fetch(`${API_BASE}/api/admin/registrations?${params}`, { credentials: 'include' });
+            allUsers = await resp.json();
+            renderTable();
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            const role = document.body.getAttribute('data-role');
+            tbody.innerHTML = allUsers.map((u, i) => `
+                <tr>
+                    <td>${i+1}</td>
+                    <td>
+                        <div class="dropdown-actions">
+                            <button class="btn-admin-actions" onclick="toggleActionsDropdown(event, ${u.id})">
+                                Actions <span style="font-size: 0.65rem;">▼</span>
+                            </button>
+                            <div class="dropdown-menu" id="actions-dropdown-${u.id}">
+                                ${['admin','manager'].includes(role) ? `<a href="#" onclick="triggerEdit(${u.id}); event.preventDefault();">✏️ Edit</a>` : ''}
+                                <a href="#" onclick="triggerSupport(${u.id}); event.preventDefault();">💬 Support Log</a>
+                                <a href="#" onclick="triggerHistory(${u.id}); event.preventDefault();">📜 Purchase History</a>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${u.first_name||''}</td>
+                    <td>${u.last_name||''}</td>
+                    <td>${u.username||''}</td>
+                    <td style="color:#A78BFA; font-weight:700;">${u.passcode||''}</td>
+                    <td>${u.address||''}</td>
+                    <td>${u.zipcode||''}</td>
+                    <td>${u.user_email||''}</td>
+                    <td>${u.phone||''}</td>
+                    <td>${u.shop_id||''}</td>
+                    <td>${u.reg_email||''}</td>
+                    <td>${u.submitted_at ? new Date(u.submitted_at).toLocaleDateString() : ''}</td>
+                    <td>${u.expiry_date ? new Date(u.expiry_date).toLocaleDateString() : ''}</td>
+                    <td>${u.store_name||''}</td>
+                    <td>${u.legal_name||''}</td>
+                    <td>${u.product||''}</td>
+                    <td>${u.plan||''}</td>
+                    <td><span class="${u.is_active ? 'badge-active' : 'badge-inactive'}">${u.is_active?'ACTIVE':'INACTIVE'}</span></td>
+                    <td>${u.card_no||''}</td>
+                    <td>${u.account_no||''}</td>
+                </tr>
+            `).join('');
+        }
+
+        function toggleActionsDropdown(e, id) {
+            e.stopPropagation();
+            document.querySelectorAll('.dropdown-menu').forEach(el => {
+                if (el.id !== `actions-dropdown-${id}`) {
+                    el.classList.remove('show');
+                }
+            });
+            const menu = document.getElementById(`actions-dropdown-${id}`);
+            if (menu) menu.classList.toggle('show');
+        }
+
+        function toggleSettingsDropdown(e) {
+            e.stopPropagation();
+            document.querySelectorAll('.dropdown-menu').forEach(el => {
+                if (el.id !== 'settings-dropdown') {
+                    el.classList.remove('show');
+                }
+            });
+            const menu = document.getElementById('settings-dropdown');
+            if (menu) menu.classList.toggle('show');
+        }
+
+        window.addEventListener('click', function(e) {
+            if (!e.target.closest('.dropdown-actions') && !e.target.closest('.dropdown-settings')) {
+                document.querySelectorAll('.dropdown-menu').forEach(el => el.classList.remove('show'));
+            }
+        });
+
+        function triggerEdit(id) {
+            document.querySelectorAll('.dropdown-menu').forEach(el => el.classList.remove('show'));
+            openEditModal(id);
+        }
+
+        function triggerSupport(id) {
+            document.querySelectorAll('.dropdown-menu').forEach(el => el.classList.remove('show'));
+            openSupportModal(id);
+        }
+
+        function triggerHistory(id) {
+            document.querySelectorAll('.dropdown-menu').forEach(el => el.classList.remove('show'));
+            openPurchaseModal(id);
+        }
+
+        function openEditModal(id) {
+            currentRegId = id;
+            const u = allUsers.find(x => x.id === id);
+            const fields = [
+                { id: 'first_name', label: 'First Name', val: u.first_name },
+                { id: 'last_name', label: 'Last Name', val: u.last_name },
+                { id: 'username', label: 'Username', val: u.username },
+                { id: 'passcode', label: 'Passcode', val: u.passcode },
+                { id: 'store_name', label: 'Location Name', val: u.store_name },
+                { id: 'corporation', label: 'Legal Name', val: u.legal_name || u.corporation },
+                { id: 'address', label: 'Address', val: u.address },
+                { id: 'city', label: 'City', val: u.city },
+                { id: 'state', label: 'State', val: u.state },
+                { id: 'zipcode', label: 'Zip', val: u.zipcode },
+                { id: 'mobile', label: 'Phone Number', val: u.phone || u.mobile },
+                { id: 'shop_id', label: 'Shop ID', val: u.shop_id },
+                { id: 'product', label: 'App Name', val: u.product },
+                { id: 'plan', label: 'RTN Plan', val: u.plan },
+                { id: 'email', label: 'Shop Email ID', val: u.reg_email || u.email },
+                { id: 'expiry_date', label: 'Expiry Date', val: u.expiry_date },
+                { id: 'card_no', label: 'Card Number', val: u.card_no },
+                { id: 'account_no', label: 'Account Number', val: u.account_no }
+            ];
+            document.getElementById('modal-fields-container').innerHTML = fields.map(f => `
+                <div class="modal-field">
+                    <label>${f.label}</label>
+                    <input type="text" id="edit-${f.id}" class="input-control" value="${f.val||''}">
+                </div>
+            `).join('');
+            document.getElementById('edit-modal').style.display = 'flex';
+
+            // Correctly show/hide delete button
+            const role = document.body.getAttribute('data-role');
+            const delBtn = document.getElementById('modal-delete-btn');
+            if (delBtn) {
+                delBtn.style.display = ['admin','manager'].includes(role) ? 'block' : 'none';
+            }
+        }
+
+        async function saveEdit() {
+            const updates = {};
+            const keys = [
+                'first_name', 'last_name', 'username', 'passcode', 
+                'store_name', 'corporation', 'address', 'city', 'state', 'zipcode', 
+                'mobile', 'shop_id', 'product', 'plan', 'email', 'expiry_date',
+                'card_no', 'account_no'
+            ];
+            keys.forEach(k => updates[k] = document.getElementById(`edit-${k}`).value);
+            
+            const resp = await fetch(`${API_BASE}/api/admin/users/${currentRegId}`, {
+                method: 'PATCH', 
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(updates), 
+                credentials: 'include'
+            });
+            
+            const result = await resp.json();
+            if (result.success) {
+                closeModal('edit-modal'); 
+                fetchUsers();
+            } else {
+                alert('Save failed: ' + result.error);
+            }
+        }
+
+        async function openPurchaseModal(id) {
+            currentRegId = id;
+            const u = allUsers.find(x => x.id === id);
+            document.getElementById('purchase-cust-name').textContent = u.store_name || u.first_name;
+            document.getElementById('purchase-modal').style.display = 'flex';
+            
+            // Reset inputs
+            document.getElementById('p-product').value = 'Wifi Scanner';
+            document.getElementById('p-qty').value = '1';
+            document.getElementById('p-payment-mode').value = 'Card';
+            document.getElementById('p-card-no').value = '';
+            document.getElementById('p-card-exp').value = '';
+            document.getElementById('p-card-cvv').value = '';
+            document.getElementById('p-cheque-image').value = '';
+            togglePaymentFields();
+            
+            fetchPurchases(id);
+        }
+
+        async function fetchPurchases(id) {
+            const resp = await fetch(`${API_BASE}/api/admin/purchase-history/${id}`, { credentials: 'include' });
+            const data = await resp.json();
+            document.getElementById('purchase-history-list').innerHTML = data.history.map(p => `
+                <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:12px; margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center; border: 1px solid rgba(255,255,255,0.02);">
+                    <div>
+                        <div style="font-weight:600; color:#fff; font-size:0.95rem;">${p.details}</div>
+                        <div style="font-size:0.75rem; opacity:0.5; margin-top:4px;">📅 ${new Date(p.invoice_date).toLocaleString()}</div>
+                        ${p.attachment_path ? `
+                            <div style="margin-top:8px;">
+                                <a href="${API_BASE}${p.attachment_path}" target="_blank" style="color:#10B981; font-size:0.8rem; text-decoration:underline; font-weight:600;">📎 View Cheque Image</a>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('') || '<div style="opacity:0.5; text-align:center; padding:2rem;">No purchase history available</div>';
+        }
+
+        function togglePaymentFields() {
+            const mode = document.getElementById('p-payment-mode').value;
+            if (mode === 'Card') {
+                document.getElementById('p-card-fields').style.display = 'block';
+                document.getElementById('p-cheque-fields').style.display = 'none';
+            } else {
+                document.getElementById('p-card-fields').style.display = 'none';
+                document.getElementById('p-cheque-fields').style.display = 'block';
+            }
+        }
+
+        async function addPurchase() {
+            const product = document.getElementById('p-product').value;
+            const qty = parseInt(document.getElementById('p-qty').value) || 1;
+            const mode = document.getElementById('p-payment-mode').value;
+            
+            let productEmoji = '📶';
+            if (product === 'Display Scanner') { productEmoji = '📺'; }
+            if (product === 'Android Box') { productEmoji = '📦'; }
+            
+            let details = '';
+            const fd = new FormData();
+            
+            if (mode === 'Card') {
+                const cardNo = document.getElementById('p-card-no').value;
+                const cardExp = document.getElementById('p-card-exp').value;
+                const cardCvv = document.getElementById('p-card-cvv').value;
+                if (!cardNo || !cardExp || !cardCvv) {
+                    alert('Please fill out all card details (Card Number, Expiry, and CVV).');
+                    return;
+                }
+                const lastFour = cardNo.slice(-4) || '****';
+                details = `${productEmoji} ${product} (Qty: ${qty}) | Payment: 💳 Card (No: ****-****-****-${lastFour}, Exp: ${cardExp})`;
+            } else {
+                const chequeInput = document.getElementById('p-cheque-image');
+                if (chequeInput.files.length === 0) {
+                    alert('Please upload a cheque image for e-Cheque payment.');
+                    return;
+                }
+                details = `${productEmoji} ${product} (Qty: ${qty}) | Payment: 📄 e-Cheque`;
+                fd.append('cheque_image', chequeInput.files[0]);
+            }
+            
+            fd.append('registration_id', currentRegId);
+            fd.append('amount', 0); // record 0 since amount is not required
+            fd.append('details', details);
+            
+            const resp = await fetch(`${API_BASE}/api/admin/purchase-history`, {
+                method: 'POST',
+                body: fd,
+                credentials: 'include'
+            });
+            
+            if (resp.ok) {
+                // Clear fields
+                document.getElementById('p-qty').value = '1';
+                document.getElementById('p-card-no').value = '';
+                document.getElementById('p-card-exp').value = '';
+                document.getElementById('p-card-cvv').value = '';
+                document.getElementById('p-cheque-image').value = '';
+                fetchPurchases(currentRegId);
+            } else {
+                const errData = await resp.json();
+                alert('Failed to save purchase: ' + (errData.error || 'Unknown Error'));
+            }
+        }
+
+        async function openSupportModal(id) {
+            currentRegId = id;
+            const u = allUsers.find(x => x.id === id);
+            document.getElementById('support-cust-name').textContent = u.store_name;
+            document.getElementById('support-modal').style.display = 'flex';
+            fetchComments(id);
+        }
+
+        async function fetchComments(id) {
+            const resp = await fetch(`${API_BASE}/api/admin/support-comments/${id}`, { credentials: 'include' });
+            const data = await resp.json();
+            const role = document.body.getAttribute('data-role');
+            document.getElementById('comment-list').innerHTML = data.comments.map(c => `
+                <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:12px; margin-bottom:1rem; position:relative;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; opacity:0.5; margin-bottom:5px; padding-right:45px;">
+                        <span>${c.staff_name}</span>
+                        <span>${new Date(c.created_at).toLocaleString()}</span>
+                    </div>
+                    ${c.caller_number ? `<div style="font-size:0.75rem; color:#8B5CF6; margin-bottom:5px;">Caller: ${c.caller_number}</div>` : ''}
+                    <div style="color:rgba(255,255,255,0.9); line-height:1.4; padding-right:20px;">${c.comment}</div>
+                    ${c.attachment_path ? `
+                        <div style="margin-top:10px;">
+                            <a href="${API_BASE}${c.attachment_path}" target="_blank" style="color:#10B981; font-size:0.8rem; text-decoration:underline; font-weight:600;">📎 View Attachment</a>
+                        </div>
+                    ` : ''}
+                    ${(c.staff_id === currentUserId || role === 'admin') ? `
+                        <button onclick="deleteComment(${c.id})" style="position:absolute; top:0.8rem; right:0.8rem; background:rgba(239,68,68,0.1); color:#EF4444; border:1px solid rgba(239,68,68,0.2); border-radius:6px; cursor:pointer; font-size:0.7rem; font-weight:700; padding:4px 8px; transition:all 0.2s;">DEL</button>
+                    ` : ''}
+                </div>
+            `).join('') || '<div style="opacity:0.5; text-align:center; padding:2rem;">No support history</div>';
+        }
+
+        async function deleteComment(id) {
+            if(!confirm('Delete this note?')) return;
+            const resp = await fetch(`${API_BASE}/api/admin/support-comments/${id}`, { method: 'DELETE', credentials: 'include' });
+            if(resp.ok) fetchComments(currentRegId);
+            else alert('Error deleting note');
+        }
+
+        async function addComment() {
+            const text = document.getElementById('new-comment').value;
+            const caller = document.getElementById('caller-number').value;
+            const fileInput = document.getElementById('support-file');
+            
+            if(!text || !caller) {
+                alert('Both Note and Caller Number are required.');
+                return;
+            }
+            
+            const fd = new FormData(); 
+            fd.append('comment', text);
+            fd.append('registration_id', currentRegId);
+            fd.append('caller_number', caller);
+            if (fileInput.files.length > 0) {
+                fd.append('attachment', fileInput.files[0]);
+            }
+
+            const resp = await fetch(`${API_BASE}/api/admin/support-comment`, { 
+                method: 'POST', 
+                body: fd, 
+                credentials: 'include' 
+            });
+            
+            if (resp.ok) {
+                document.getElementById('new-comment').value = ''; 
+                document.getElementById('caller-number').value = '';
+                document.getElementById('support-file').value = '';
+                document.getElementById('caller-number').value = '';
+                fetchComments(currentRegId);
+            }
+        }
+
+        async function deleteRegistration(id) {
+            const reason = prompt("Please enter the reason for deletion (Required):");
+            if (!reason) return alert("Deletion cancelled. Reason is required.");
+
+            if (!confirm(`Are you sure you want to PERMANENTLY delete this registration?\nReason: ${reason}`)) return;
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/registrations/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason }),
+                    credentials: 'include'
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    alert('Deleted successfully and logged');
+                    closeModal('edit-modal');
+                    fetchUsers();
+                    fetchStats();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (e) {
+                alert('Delete failed');
+            }
+        }
+
+        async function openStaffModal() { document.getElementById('staff-modal').style.display = 'flex'; fetchStaff(); }
+        async function fetchStaff() {
+            const resp = await fetch(`${API_BASE}/api/admin/staff`, { credentials: 'include' });
+            const staff = await resp.json();
+            document.getElementById('staff-list').innerHTML = staff.map(s => `
+                <div class="staff-item">
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-weight:600; color:#fff;">${s.username} <span style="opacity:0.5; font-size:0.8rem; font-weight:400;">(${s.role})</span></span>
+                        <span style="font-size:0.8rem; color:#EF4444; font-family:monospace; margin-top:4px;">Pass: ${s.passcode || 'N/A'}</span>
+                    </div>
+                    <button onclick="deleteStaff(${s.id})" style="color:#EF4444; border:none; background:none; cursor:pointer; font-weight:700; padding:10px;">Del</button>
+                </div>
+            `).join('');
+        }
+
+        async function createStaff(e) {
+            e.preventDefault();
+            const body = { 
+                username: document.getElementById('new-staff-user').value, 
+                email: document.getElementById('new-staff-email').value,
+                password: document.getElementById('new-staff-pass').value, 
+                role: document.getElementById('new-staff-role').value 
+            };
+            const resp = await fetch(`${API_BASE}/api/admin/staff`, { 
+                method: 'POST', 
+                headers: {'Content-Type':'application/json'}, 
+                body: JSON.stringify(body), 
+                credentials: 'include' 
+            });
+            const result = await resp.json();
+            if (result.success) {
+                alert('Staff created successfully');
+                document.getElementById('new-staff-user').value = '';
+                document.getElementById('new-staff-email').value = '';
+                document.getElementById('new-staff-pass').value = '';
+                fetchStaff();
+            } else {
+                alert('Error: ' + result.error);
+            }
+        }
+        async function deleteStaff(id) { if(confirm('Del?')) { await fetch(`${API_BASE}/api/admin/staff/${id}`, {method:'DELETE', credentials:'include'}); fetchStaff(); } }
+
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function resetFilters() { document.querySelectorAll('.filter-panel input, .filter-panel select').forEach(e => e.value = ''); fetchUsers(); }
+        async function logout() { await fetch(`${API_BASE}/api/admin/logout`, { method: 'POST', credentials: 'include' }); window.location.href = 'admin-login.html'; }
+
+        checkAuth().then(() => { fetchStats(); fetchUsers(); });
+    </script>
+</body>
+</html>

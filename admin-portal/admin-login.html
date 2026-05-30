@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login | RTN LAI 5</title>
+    <link rel="stylesheet" href="./css/global.css">
+    <link rel="stylesheet" href="./css/admin.css">
+</head>
+<body class="login-body">
+    <div class="login-card">
+        <div class="logo">RTN <span>LAI</span></div>
+        <h2>Admin Portal</h2>
+        <p>Enter your credentials to manage registrations</p>
+
+        <div id="error-msg"></div>
+
+        <form id="login-form">
+            <div class="input-group">
+                <label>Username</label>
+                <input type="text" id="username" class="input-control" placeholder="Admin@RTN" required autofocus>
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="password" class="input-control" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn-admin-primary" id="submit-btn" style="width:100%; margin-top:1rem;">Login to Dashboard</button>
+        </form>
+    </div>
+
+    <script>
+        const API_BASE = window.location.port === '3001' ? '' : 'http://localhost:3001';
+
+        // Check if already logged in
+        fetch(`${API_BASE}/api/admin/me`, { credentials: 'include' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.loggedIn) window.location.href = 'admin-panel.html';
+            });
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submit-btn');
+            const errorMsg = document.getElementById('error-msg');
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Authenticating...';
+            errorMsg.style.display = 'none';
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }),
+                    credentials: 'include'
+                });
+                const data = await resp.json();
+
+                if (resp.ok && data.success) {
+                    window.location.href = 'admin-panel.html';
+                } else {
+                    errorMsg.textContent = data.error || 'Login failed';
+                    errorMsg.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Login to Dashboard';
+                }
+            } catch (err) {
+                errorMsg.textContent = 'Server connection failed';
+                errorMsg.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Login to Dashboard';
+            }
+        });
+    </script>
+</body>
+</html>

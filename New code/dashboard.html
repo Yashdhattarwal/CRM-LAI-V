@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - RTN LAI</title>
+    <link rel="stylesheet" href="./css/global.css">
+    <link rel="stylesheet" href="./css/dashboard.css">
+</head>
+<body>
+    <!-- Service Portal Modal (Loaded Immediately on Login) -->
+    <div id="service-modal" class="modal-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; z-index: 9999;">
+        <div class="modal-content" style="background: #111827; border-radius: 20px; border: 1px solid rgba(139,92,246,0.25); padding: 2.5rem; max-width: 650px; width: 90%; box-shadow: 0 10px 50px rgba(139,92,246,0.2);">
+            <h2 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 1.5rem; color:#fff;">Subscription Services: <span style="color:#3B82F6;">Active Portal</span></h2>
+            
+            <div style="display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 2rem;">
+                <!-- Renewal -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;" 
+                     onmouseover="this.style.background='rgba(139,92,246,0.08)'; this.style.borderColor='rgba(139,92,246,0.3)';" 
+                     onmouseout="this.style.background='rgba(255,255,255,0.02)'; this.style.borderColor='rgba(255,255,255,0.05)';" 
+                     onclick="window.location.href='renew-scanner.html'">
+                    <div>
+                        <div style="font-weight: 700; font-size: 1.15rem; color: #fff;">Plan Extension / Renewal</div>
+                        <div style="font-size: 0.88rem; color: #9CA3AF; margin-top: 0.35rem;">Manage recurring subscriptions easily</div>
+                    </div>
+                    <span style="font-size: 1.75rem;">💳</span>
+                </div>
+                
+                <!-- Buy Scanner -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;" 
+                     onmouseover="this.style.background='rgba(139,92,246,0.08)'; this.style.borderColor='rgba(139,92,246,0.3)';" 
+                     onmouseout="this.style.background='rgba(255,255,255,0.02)'; this.style.borderColor='rgba(255,255,255,0.05)';" 
+                     onclick="window.location.href='renew-scanner.html'">
+                    <div>
+                        <div style="font-weight: 700; font-size: 1.15rem; color: #fff;">Purchase Hardware Scanner</div>
+                        <div style="font-size: 0.88rem; color: #9CA3AF; margin-top: 0.35rem;">Order standalone scanner setups</div>
+                    </div>
+                    <span style="font-size: 1.75rem;">🛒</span>
+                </div>
+            </div>
+
+            <button onclick="document.getElementById('service-modal').style.display='none';" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); padding: 0.6rem 1.75rem; border-radius: 8px; color: #fff; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)';" onmouseout="this.style.background='rgba(255,255,255,0.06)';">Close</button>
+        </div>
+    </div>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div style="background:var(--text-main); border-radius:50%; width:30px; height:30px; display:flex; padding:5px;">
+                   <svg viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="10"/></svg>
+                </div>
+                RTN LAI
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-target="dashboard">
+                    <span class="nav-icon">📊</span> Dashboard
+                </a>
+                <a href="#" class="nav-item" data-target="shops">
+                    <span class="nav-icon">🏪</span> My Shops
+                </a>
+                <a href="#" class="nav-item" data-target="scanner">
+                    <span class="nav-icon">🛒</span> Buy Scanner
+                </a>
+                <a href="#" class="nav-item" data-target="renewal">
+                    <span class="nav-icon">💳</span> Renewal
+                </a>
+                <a href="#" class="nav-item" data-target="profile">
+                    <span class="nav-icon">👤</span> Profile
+                </a>
+                <a href="#" class="nav-item" data-target="settings">
+                    <span class="nav-icon">⚙️</span> Settings
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="flex items-center gap-2">
+                    <a href="index.html" class="text-sec" style="text-decoration:none">← Back to Site</a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <div class="header-title">
+                    <h2 id="page-title">Welcome back, Sahil</h2>
+                    <p id="page-subtitle">Downtown Store Dashboard</p>
+                </div>
+                <div class="header-actions">
+                    <div class="search-bar">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="input-control" placeholder="Search anything...">
+                    </div>
+                    <button class="icon-btn">🔔</button>
+                    <button class="icon-btn">💬</button>
+                    <div class="avatar">SK</div>
+                </div>
+            </header>
+
+            <!-- Dynamic Views Container -->
+            <div id="view-container">
+                <!-- Dashboard View -->
+                <div id="view-dashboard" class="view-section">
+                    <div class="flex justify-between items-center" style="margin-bottom:1rem;">
+                        <h3 style="color:var(--text-main);">Overview</h3>
+                        <select class="input-control" style="width:auto; padding:0.4rem 1rem; border-radius:20px;">
+                            <option>Last month</option>
+                            <option>This month</option>
+                        </select>
+                    </div>
+                    
+                    <div class="grid kpi-grid gap-4">
+                        <div class="card kpi-card">
+                            <div class="kpi-title">🎟️ Active Tickets</div>
+                            <div class="kpi-value">1,247</div>
+                            <div class="kpi-trend trend-red">↑ 12% <span style="color:var(--text-sec); margin-left:4px;">vs last month</span></div>
+                        </div>
+                        <div class="card kpi-card">
+                            <div class="kpi-title">💲 Daily Revenue</div>
+                            <div class="kpi-value">$24,580</div>
+                            <div class="kpi-trend trend-red">↑ 8% <span style="color:var(--text-sec); margin-left:4px;">vs last month</span></div>
+                        </div>
+                        <div class="card kpi-card">
+                            <div class="kpi-title">🎯 Avg Probability</div>
+                            <div class="kpi-value">87.3%</div>
+                            <div class="kpi-trend trend-red">↑ 5% <span style="color:var(--text-sec); margin-left:4px;">vs last month</span></div>
+                        </div>
+                        <div class="card kpi-card">
+                            <div class="kpi-title">✨ AI Accuracy</div>
+                            <div class="kpi-value">94.2%</div>
+                            <div class="kpi-trend trend-red">↑ 3% <span style="color:var(--text-sec); margin-left:4px;">vs last month</span></div>
+                        </div>
+                    </div>
+
+                    <div class="grid dashboard-grid">
+                        <div class="card chart-card">
+                            <div class="section-header">
+                                <div class="section-title">
+                                    <h3>Predictive Analytics</h3>
+                                    <p>Monthly trend analysis</p>
+                                </div>
+                            </div>
+                            <div style="flex-grow:1; display:flex; align-items:flex-end; padding-bottom:1rem; border-bottom:1px dashed var(--border); position:relative;">
+                                <!-- Placeholder for Chart (SVG mimicking Figma line chart) -->
+                                <svg width="100%" height="150" viewBox="0 0 500 150" preserveAspectRatio="none">
+                                    <path d="M0 120 Q50 140 100 100 T200 80 T300 110 T400 50 T500 20" fill="none" stroke="var(--primary)" stroke-width="4" />
+                                    <!-- Area gradient -->
+                                    <path d="M0 120 Q50 140 100 100 T200 80 T300 110 T400 50 T500 20 L500 150 L0 150 Z" fill="rgba(76, 110, 245, 0.1)" />
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <div class="card list-card">
+                            <div class="section-header">
+                                <div class="section-title">
+                                    <h3>Recent Active Tickets</h3>
+                                    <p>Latest customer interactions</p>
+                                </div>
+                                <button class="icon-btn">⚙️</button>
+                            </div>
+                            <input type="text" class="input-control mb-4" placeholder="Search tickets..." style="margin-bottom:1rem; border-radius:20px; background:var(--bg);" />
+                            
+                            <div class="ticket-list" style="display:flex; flex-direction:column; gap:1rem;">
+                                <div class="flex justify-between items-center" style="padding-bottom:1rem; border-bottom:1px solid var(--border)">
+                                    <div>
+                                        <div style="font-weight:600;">Product Return</div>
+                                        <div style="font-size:0.8rem; color:var(--text-sec)">Ticket #1024 • 2m ago</div>
+                                    </div>
+                                    <span style="background:rgba(245, 158, 11, 0.1); color:var(--warning); padding:0.2rem 0.5rem; border-radius:4px; font-size:0.8rem; font-weight:600;">Pending</span>
+                                </div>
+                                <div class="flex justify-between items-center" style="padding-bottom:1rem; border-bottom:1px solid var(--border)">
+                                    <div>
+                                        <div style="font-weight:600;">Billing Issue</div>
+                                        <div style="font-size:0.8rem; color:var(--text-sec)">Ticket #1023 • 15m ago</div>
+                                    </div>
+                                    <span style="background:rgba(16, 185, 129, 0.1); color:var(--success); padding:0.2rem 0.5rem; border-radius:4px; font-size:0.8rem; font-weight:600;">Resolved</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <div style="font-weight:600;">System Outage</div>
+                                        <div style="font-size:0.8rem; color:var(--text-sec)">Ticket #1022 • 1h ago</div>
+                                    </div>
+                                    <span style="background:rgba(239, 68, 68, 0.1); color:var(--danger); padding:0.2rem 0.5rem; border-radius:4px; font-size:0.8rem; font-weight:600;">Urgent</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Forms Container for generated views (hidden by default initially) -->
+                <div id="view-form" class="view-section" style="display:none; max-width:800px;">
+                    <div class="card">
+                        <h3 id="form-title" style="margin-bottom: 1.5rem; font-size:1.3rem;">Form Title</h3>
+                        <div id="form-content"></div>
+                        <div style="margin-top:2rem; padding-top:1.5rem; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:1rem;">
+                            <button class="btn btn-outline" id="form-cancel">Cancel</button>
+                            <button class="btn btn-primary" id="form-submit">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="./js/dashboard.js"></script>
+</body>
+</html>

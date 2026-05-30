@@ -27,9 +27,10 @@
             <button type="submit" class="btn-admin-primary" id="submit-btn" style="width:100%; margin-top:1rem;">Login to Dashboard</button>
         </form>
     </div>
-
     <script>
-        const API_BASE = window.location.port === '3001' ? '' : 'http://localhost:3001';
+        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? (window.location.port === '3001' ? '' : 'http://localhost:3001')
+            : '';
 
         // Check if already logged in
         fetch(`${API_BASE}/api/admin/me`, { credentials: 'include' })

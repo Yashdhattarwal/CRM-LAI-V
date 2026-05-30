@@ -1637,6 +1637,22 @@ app.delete("/api/admin/registrations/status-log/:logId", adminOnly, (req, res) =
     res.json({ success: true });
 });
 
+// Debug paths route
+app.get('/api/debug-paths', (req, res) => {
+    try {
+        const rootDir = path.join(__dirname, '..');
+        res.json({
+            __dirname,
+            rootDir,
+            filesInRoot: fs.readdirSync(rootDir),
+            adminPortalExists: fs.existsSync(path.join(rootDir, 'admin-portal')),
+            adminPortalFiles: fs.existsSync(path.join(rootDir, 'admin-portal')) ? fs.readdirSync(path.join(rootDir, 'admin-portal')) : []
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Catch-all → index.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(FRONTEND, 'index.html'));

@@ -1085,6 +1085,116 @@ app.post('/api/admin/logout', (req, res) => {
   res.json({ success: true });
 });
 
+// POST /api/admin/registrations (Create new customer by admin/manager)
+app.post('/api/admin/registrations', adminOnly, async (req, res) => {
+  if (req.session.role === 'employee') {
+    return res.status(403).json({ error: 'Read-only access' });
+  }
+
+  try {
+    const {
+      first_name, last_name, email, username, password,
+      mobile, store_phone, address, city, state, zipcode,
+      store_name, corporation, product, plan, scanner, shipping,
+      payment_mode, bank_name, routing_no, account_no, account_type, account_name,
+      card_no
+    } = req.body;
+
+    // Validate required fields
+    const missing = [];
+    if (!first_name?.trim())  missing.push("first_name");
+    if (!last_name?.trim())   missing.push("last_name");
+    if (!email?.trim())       missing.push("email");
+    if (!username?.trim())    missing.push("username");
+    if (!password?.trim())    missing.push("password");
+    if (!store_name?.trim())  missing.push("store_name");
+
+    if (missing.length) {
+      return res.status(400).json({ error: `Missing fields: ${missing.join(", ")}` });
+    }
+
+    // Check duplicate username
+    const existingUser = dbGet("SELECT id FROM users WHERE username = ?", [username.trim()]);
+    if (existingUser) {
+      return res.status(409).json({ error: "That username is already taken. Please choose a different one." });
+    }
+
+    // Check duplicate email
+    const existingEmail = dbGet("SELECT id FROM users WHERE email = ?", [email.trim().toLowerCase()]);
+    if (existingEmail) {
+      return res.status(409).json({ error: "An account with that email already exists." });
+    }
+
+    // Hash password
+    const bcrypt = require('bcrypt');
+    const password_hash = await bcrypt.hash(password, 12);
+
+    // Insert user
+    dbRun(
+      `INSERT INTO users (username, email, password_hash, passcode, first_name, last_name)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [username.trim(), email.trim().toLowerCase(), password_hash, password, first_name.trim(), last_name.trim()]
+    );
+
+    // Query user ID explicitly
+    const userRow = dbGet("SELECT id FROM users WHERE email = ? ORDER BY id DESC LIMIT 1", [email.trim().toLowerCase()]);
+    const userId = userRow ? userRow.id : 0;
+
+    // Identify target table based on state
+    const stateCode = (state || "").trim().toUpperCase();
+
+    // Calculate Shop ID (get count + 1)
+    const count = (dbGet("SELECT count(*) as c FROM registrations") || { c: 0 }).c;
+    const shop_id = String(count + 1).padStart(2, "0");
+
+    const regParamsWithShopId = [
+        userId, shop_id, password, first_name.trim(), last_name.trim(), email.trim(), mobile || "", store_phone || "",
+        address || "", city || "", stateCode || "", zipcode || "",
+        store_name.trim(), (corporation || "").trim(),
+        product || "LAI V", plan || "Trial (30 Days)", scanner || "Not-Needed", shipping || "Standard",
+        payment_mode || "Card",
+        bank_name || "", routing_no || "", account_no || "", account_type || "", account_name || "",
+        card_no ? (card_no.includes('XXXX') ? card_no : `XXXX-XXXX-XXXX-${card_no.slice(-4)}`) : ""
+    ];
+
+    // Insert into Master table ALWAYS
+    const insertMasterSql = `
+        INSERT INTO registrations
+          (user_id, shop_id, passcode, first_name, last_name, email, mobile, store_phone,
+           address, city, state, zipcode, store_name, corporation,
+           product, plan, scanner, shipping, payment_mode,
+           bank_name, routing_no, account_no, account_type, account_name, card_no)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `;
+    dbRun(insertMasterSql, regParamsWithShopId);
+
+    // Query registration ID explicitly
+    const regRow = dbGet("SELECT id FROM registrations WHERE shop_id = ? LIMIT 1", [shop_id]);
+    const registrationId = regRow ? regRow.id : 0;
+
+    // Automate Purchase History Entry
+    dbRun(`
+        INSERT INTO purchase_history (registration_id, amount, details)
+        VALUES (?, ?, ?)
+    `, [registrationId, 0.00, `${product || 'LAI V'} (${plan || 'Trial'})`]);
+
+    // Insert into State-Specific table if valid
+    if (STATES.includes(stateCode)) {
+        const insertStateSql = insertMasterSql.replace("registrations", `registrations_${stateCode}`);
+        dbRun(insertStateSql, regParamsWithShopId);
+        console.log(`[ADMIN ROUTING ✅] Added to registrations_${stateCode} with Shop ID ${shop_id}`);
+    }
+
+    console.log(`[ADMIN REGISTER ✅] ${username} <${email}> in ${stateCode} by admin/manager`);
+
+    res.json({ success: true, message: "Customer registered successfully!", shop_id });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error: " + err.message });
+  }
+});
+
 // GET /api/admin/registrations
 app.get('/api/admin/registrations', adminOnly, (req, res) => {
   const { 

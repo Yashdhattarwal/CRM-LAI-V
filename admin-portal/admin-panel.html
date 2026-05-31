@@ -42,64 +42,310 @@
             <div class="stat-card"><h3>Inactive</h3><div class="value" id="stat-inactive" style="color: #EF4444;">0</div></div>
         </div>
 
-        <div class="filter-panel">
-            <div class="filter-grid" style="grid-template-columns: repeat(4, 1fr);">
-                <input type="text" id="f-fname" placeholder="Search by First Name" class="input-control">
-                <input type="text" id="f-lname" placeholder="Search by Last Name" class="input-control">
-                <input type="text" id="f-city" placeholder="Search by Shop City" class="input-control">
-                <input type="text" id="f-state" placeholder="Search by Shop State" class="input-control">
-                
-                <input type="text" id="f-user" placeholder="Search by User Name" class="input-control">
-                <input type="text" id="f-shopemail" placeholder="Search by Shop Email" class="input-control">
-                <input type="text" id="f-useremail" placeholder="Search by User Email" class="input-control">
-                <input type="text" id="f-phone" placeholder="Search by Phone Number" class="input-control">
-                
-                <input type="text" id="f-shopid" placeholder="Search by Shop Id" class="input-control">
-                <input type="text" id="f-product" placeholder="Search by Product name" class="input-control">
-                <input type="text" id="f-plan" placeholder="Search by Plan" class="input-control">
-                <select id="f-status" class="input-control">
-                    <option value="">All Statuses</option>
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                </select>
+        <!-- TABS NAV BAR -->
+        <div class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab('existing-customers', this)">
+                📋 Existing Customers
+            </button>
+            <button class="tab-btn" onclick="switchTab('new-customer', this)">
+                ➕ New Customer Registration
+            </button>
+        </div>
+
+        <!-- TAB 1: Existing Customers -->
+        <div id="tab-existing-customers" class="tab-pane">
+            <div class="filter-panel">
+                <div class="filter-grid" style="grid-template-columns: repeat(4, 1fr);">
+                    <input type="text" id="f-fname" placeholder="Search by First Name" class="input-control">
+                    <input type="text" id="f-lname" placeholder="Search by Last Name" class="input-control">
+                    <input type="text" id="f-city" placeholder="Search by Shop City" class="input-control">
+                    <input type="text" id="f-state" placeholder="Search by Shop State" class="input-control">
+                    
+                    <input type="text" id="f-user" placeholder="Search by User Name" class="input-control">
+                    <input type="text" id="f-shopemail" placeholder="Search by Shop Email" class="input-control">
+                    <input type="text" id="f-useremail" placeholder="Search by User Email" class="input-control">
+                    <input type="text" id="f-phone" placeholder="Search by Phone Number" class="input-control">
+                    
+                    <input type="text" id="f-shopid" placeholder="Search by Shop Id" class="input-control">
+                    <input type="text" id="f-product" placeholder="Search by Product name" class="input-control">
+                    <input type="text" id="f-plan" placeholder="Search by Plan" class="input-control">
+                    <select id="f-status" class="input-control">
+                        <option value="">All Statuses</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                    <button class="btn-admin" onclick="resetFilters()">Reset</button>
+                    <button class="btn-admin-primary" onclick="fetchUsers()">Search</button>
+                </div>
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 1rem;">
-                <button class="btn-admin" onclick="resetFilters()">Reset</button>
-                <button class="btn-admin-primary" onclick="fetchUsers()">Search</button>
+
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>SL NO</th>
+                            <th>ACTIONS</th>
+                            <th>FIRST NAME</th>
+                            <th>LAST NAME</th>
+                            <th>USER NAME</th>
+                            <th>PASSCODE</th>
+                            <th>ADDRESS</th>
+                            <th>ZIP</th>
+                            <th>USER EMAIL ID</th>
+                            <th>PHONE NUMBER</th>
+                            <th>SHOP ID</th>
+                            <th>SHOP EMAIL ID</th>
+                            <th>REGISTERED DATE</th>
+                            <th>EXPIRY DATE</th>
+                            <th>LOCATION NAME</th>
+                            <th>LEGAL NAME</th>
+                            <th>APP NAME</th>
+                            <th>RTN PLAN</th>
+                            <th>STATUS</th>
+                            <th>CARD NUMBER</th>
+                            <th>ACCOUNT NUMBER</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <tr><td colspan="17" style="text-align:center; padding:4rem; opacity:0.5;">Load data...</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <div class="table-container">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>SL NO</th>
-                        <th>ACTIONS</th>
-                        <th>FIRST NAME</th>
-                        <th>LAST NAME</th>
-                        <th>USER NAME</th>
-                        <th>PASSCODE</th>
-                        <th>ADDRESS</th>
-                        <th>ZIP</th>
-                        <th>USER EMAIL ID</th>
-                        <th>PHONE NUMBER</th>
-                        <th>SHOP ID</th>
-                        <th>SHOP EMAIL ID</th>
-                        <th>REGISTERED DATE</th>
-                        <th>EXPIRY DATE</th>
-                        <th>LOCATION NAME</th>
-                        <th>LEGAL NAME</th>
-                        <th>APP NAME</th>
-                        <th>RTN PLAN</th>
-                        <th>STATUS</th>
-                        <th>CARD NUMBER</th>
-                        <th>ACCOUNT NUMBER</th>
-                    </tr>
-                </thead>
-                <tbody id="table-body">
-                    <tr><td colspan="17" style="text-align:center; padding:4rem; opacity:0.5;">Load data...</td></tr>
-                </tbody>
-            </table>
+        <!-- TAB 2: New Customer Form -->
+        <div id="tab-new-customer" class="tab-pane" style="display:none;">
+            <div style="background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.07); padding: 2.5rem; border-radius: 24px; backdrop-filter: blur(10px);">
+                <form id="new-customer-form" onsubmit="registerNewCustomer(event)">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem;">
+                        <!-- Column 1: Store & Contact Details -->
+                        <div>
+                            <div class="form-section-title">🏢 Store & Contact Details</div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">First Name *</label>
+                                    <input type="text" id="nc-first-name" class="input-control" placeholder="John" required>
+                                </div>
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">Last Name *</label>
+                                    <input type="text" id="nc-last-name" class="input-control" placeholder="Doe" required>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">Email Address *</label>
+                                <input type="email" id="nc-email" class="input-control" placeholder="john.doe@example.com" required>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">Mobile Phone</label>
+                                    <input type="text" id="nc-mobile" class="input-control" placeholder="(555) 555-5555">
+                                </div>
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">Store Phone</label>
+                                    <input type="text" id="nc-store-phone" class="input-control" placeholder="(555) 555-0000">
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">Store Name *</label>
+                                    <input type="text" id="nc-store-name" class="input-control" placeholder="My Convenience Store" required>
+                                </div>
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">Corporation / Legal Name</label>
+                                    <input type="text" id="nc-corporation" class="input-control" placeholder="XYZ Holdings LLC">
+                                </div>
+                            </div>
+
+                            <div class="form-section-title" style="margin-top:2rem;">🔑 User Credentials</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 1rem; margin-bottom: 1rem; align-items: flex-end;">
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">Portal Username *</label>
+                                    <input type="text" id="nc-username" class="input-control" placeholder="johndoe123" required>
+                                </div>
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">Portal Password / Passcode *</label>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <input type="text" id="nc-password" class="input-control" placeholder="Generated code" required style="font-family: monospace; letter-spacing: 1px;">
+                                        <button type="button" class="btn-admin" onclick="generateNCKey()" style="white-space:nowrap; padding: 0 1rem; font-weight:700; border-color:rgba(139, 92, 246, 0.3);">⚡ Generate</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Column 2: Address, Plan & Payment Method -->
+                        <div>
+                            <div class="form-section-title">📍 Address Details</div>
+                            <div style="margin-bottom: 1rem;">
+                                <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">Street Address</label>
+                                <input type="text" id="nc-address" class="input-control" placeholder="123 Main St">
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">City</label>
+                                    <input type="text" id="nc-city" class="input-control" placeholder="Atlanta">
+                                </div>
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">State</label>
+                                    <select id="nc-state" class="input-control">
+                                        <option value="">Select State</option>
+                                        <option value="AL">Alabama</option>
+                                        <option value="AK">Alaska</option>
+                                        <option value="AZ">Arizona</option>
+                                        <option value="AR">Arkansas</option>
+                                        <option value="CA">California</option>
+                                        <option value="CO">Colorado</option>
+                                        <option value="CT">Connecticut</option>
+                                        <option value="DE">Delaware</option>
+                                        <option value="FL">Florida</option>
+                                        <option value="GA">Georgia</option>
+                                        <option value="HI">Hawaii</option>
+                                        <option value="ID">Idaho</option>
+                                        <option value="IL">Illinois</option>
+                                        <option value="IN">Indiana</option>
+                                        <option value="IA">Iowa</option>
+                                        <option value="KS">Kansas</option>
+                                        <option value="KY">Kentucky</option>
+                                        <option value="LA">Louisiana</option>
+                                        <option value="ME">Maine</option>
+                                        <option value="MD">Maryland</option>
+                                        <option value="MA">Massachusetts</option>
+                                        <option value="MI">Michigan</option>
+                                        <option value="MN">Minnesota</option>
+                                        <option value="MS">Mississippi</option>
+                                        <option value="MO">Missouri</option>
+                                        <option value="MT">Montana</option>
+                                        <option value="NE">Nebraska</option>
+                                        <option value="NV">Nevada</option>
+                                        <option value="NH">New Hampshire</option>
+                                        <option value="NJ">New Jersey</option>
+                                        <option value="NM">New Mexico</option>
+                                        <option value="NY">New York</option>
+                                        <option value="NC">North Carolina</option>
+                                        <option value="ND">North Dakota</option>
+                                        <option value="OH">Ohio</option>
+                                        <option value="OK">Oklahoma</option>
+                                        <option value="OR">Oregon</option>
+                                        <option value="PA">Pennsylvania</option>
+                                        <option value="RI">Rhode Island</option>
+                                        <option value="SC">South Carolina</option>
+                                        <option value="SD">South Dakota</option>
+                                        <option value="TN">Tennessee</option>
+                                        <option value="TX">Texas</option>
+                                        <option value="UT">Utah</option>
+                                        <option value="VT">Vermont</option>
+                                        <option value="VA">Virginia</option>
+                                        <option value="WA">Washington</option>
+                                        <option value="WV">West Virginia</option>
+                                        <option value="WI">Wisconsin</option>
+                                        <option value="WY">Wyoming</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">Zipcode</label>
+                                    <input type="text" id="nc-zipcode" class="input-control" placeholder="30301">
+                                </div>
+                            </div>
+
+                            <div class="form-section-title" style="margin-top:2rem;">🛡️ Plan & Hardware</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">App Product</label>
+                                    <select id="nc-product" class="input-control">
+                                        <option value="Wifi Scanner">📶 Wifi Scanner</option>
+                                        <option value="Display Scanner">📺 Display Scanner</option>
+                                        <option value="Android Box">📦 Android Box</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">Service Plan</label>
+                                    <select id="nc-plan" class="input-control">
+                                        <option value="Trial (30 Days)">Trial (30 Days)</option>
+                                        <option value="Monthly Plan ($60/mo)">Monthly Plan ($60/mo)</option>
+                                        <option value="Yearly Plan ($600/yr)">Yearly Plan ($600/yr)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">Physical Scanner hardware</label>
+                                    <select id="nc-scanner" class="input-control">
+                                        <option value="Not-Needed">Not-Needed</option>
+                                        <option value="Wifi Scanner Hardware">Wifi Scanner Hardware</option>
+                                        <option value="Display Scanner Hardware">Display Scanner Hardware</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">Shipping Option</label>
+                                    <select id="nc-shipping" class="input-control">
+                                        <option value="Standard">Standard</option>
+                                        <option value="Express">Express</option>
+                                        <option value="Overnight">Overnight</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-section-title">💳 Vault Billing Information</div>
+                            <div style="margin-bottom: 1rem;">
+                                <label style="font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.6); display:block; margin-bottom:0.5rem; text-transform:uppercase;">Payment Instrument Mode</label>
+                                <select id="nc-payment-mode" class="input-control" onchange="toggleNCPaymentFields()">
+                                    <option value="Card">💳 Credit / Debit Card</option>
+                                    <option value="e-Cheque">📄 Bank e-Cheque (ACH)</option>
+                                </select>
+                            </div>
+
+                            <!-- Card Fields -->
+                            <div id="nc-card-fields" style="background: rgba(255, 255, 255, 0.02); padding: 1.25rem; border-radius: 16px; margin-bottom: 1rem; border: 1px solid rgba(255, 255, 255, 0.04);">
+                                <div style="margin-bottom: 0.75rem;">
+                                    <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.5); display: block; margin-bottom: 0.25rem; text-transform:uppercase;">Card Number</label>
+                                    <input type="text" id="nc-card-no" class="input-control" placeholder="4242 4242 4242 4242">
+                                </div>
+                            </div>
+
+                            <!-- Bank Fields (hidden by default) -->
+                            <div id="nc-bank-fields" style="display:none; background: rgba(255, 255, 255, 0.02); padding: 1.25rem; border-radius: 16px; margin-bottom: 1rem; border: 1px solid rgba(255, 255, 255, 0.04);">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                                    <div>
+                                        <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.5); display: block; margin-bottom: 0.25rem; text-transform:uppercase;">Bank Name</label>
+                                        <input type="text" id="nc-bank-name" class="input-control" placeholder="Chase Bank">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.5); display: block; margin-bottom: 0.25rem; text-transform:uppercase;">Routing Number</label>
+                                        <input type="text" id="nc-routing-no" class="input-control" placeholder="021000021">
+                                    </div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                                    <div>
+                                        <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.5); display: block; margin-bottom: 0.25rem; text-transform:uppercase;">Account Number</label>
+                                        <input type="text" id="nc-account-no" class="input-control" placeholder="123456789">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.5); display: block; margin-bottom: 0.25rem; text-transform:uppercase;">Account Type</label>
+                                        <select id="nc-account-type" class="input-control">
+                                            <option value="Checking">Checking</option>
+                                            <option value="Savings">Savings</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.5); display: block; margin-bottom: 0.25rem; text-transform:uppercase;">Account Holder Name</label>
+                                    <input type="text" id="nc-account-name" class="input-control" placeholder="John Doe LLC">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 2rem; margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                        <button type="button" class="btn-admin" onclick="switchTab('existing-customers')">Cancel</button>
+                        <button type="submit" class="btn-admin-primary" id="nc-submit-btn" style="padding:0.75rem 2rem; font-size:1rem;">🚀 Register & Create Customer Account</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -793,6 +1039,115 @@
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         function resetFilters() { document.querySelectorAll('.filter-panel input, .filter-panel select').forEach(e => e.value = ''); fetchUsers(); }
         async function logout() { await fetch(`${API_BASE}/api/admin/logout`, { method: 'POST', credentials: 'include' }); window.location.href = 'admin-login.html'; }
+
+        // Tab switching logic
+        function switchTab(tabId, btn) {
+            // Hide all tab panes
+            document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
+            // Show target tab pane
+            document.getElementById('tab-' + tabId).style.display = 'block';
+            
+            // Manage active class on buttons
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if (btn) {
+                btn.classList.add('active');
+            } else {
+                // Find button by clicking manually or matches
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    if (b.innerText.includes(tabId === 'new-customer' ? 'New Customer' : 'Existing Customers')) {
+                        b.classList.add('active');
+                    }
+                });
+            }
+        }
+
+        // Toggle Payment fields in new customer form
+        function toggleNCPaymentFields() {
+            const mode = document.getElementById('nc-payment-mode').value;
+            const cardFields = document.getElementById('nc-card-fields');
+            const bankFields = document.getElementById('nc-bank-fields');
+            
+            if (mode === 'Card') {
+                cardFields.style.display = 'block';
+                bankFields.style.display = 'none';
+            } else {
+                cardFields.style.display = 'none';
+                bankFields.style.display = 'block';
+            }
+        }
+
+        // Generate Secure Passcode/Password
+        function generateNCKey() {
+            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+            let pass = '';
+            for (let i = 0; i < 12; i++) {
+                pass += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            document.getElementById('nc-password').value = pass;
+        }
+
+        // Submit New Customer Registration Form
+        async function registerNewCustomer(event) {
+            event.preventDefault();
+            const btn = document.getElementById('nc-submit-btn');
+            btn.disabled = true;
+            btn.textContent = '🔄 Registering Customer...';
+
+            const payload = {
+                first_name: document.getElementById('nc-first-name').value,
+                last_name: document.getElementById('nc-last-name').value,
+                email: document.getElementById('nc-email').value,
+                mobile: document.getElementById('nc-mobile').value,
+                store_phone: document.getElementById('nc-store-phone').value,
+                store_name: document.getElementById('nc-store-name').value,
+                corporation: document.getElementById('nc-corporation').value,
+                username: document.getElementById('nc-username').value,
+                password: document.getElementById('nc-password').value,
+                address: document.getElementById('nc-address').value,
+                city: document.getElementById('nc-city').value,
+                state: document.getElementById('nc-state').value,
+                zipcode: document.getElementById('nc-zipcode').value,
+                product: document.getElementById('nc-product').value,
+                plan: document.getElementById('nc-plan').value,
+                scanner: document.getElementById('nc-scanner').value,
+                shipping: document.getElementById('nc-shipping').value,
+                payment_mode: document.getElementById('nc-payment-mode').value,
+                card_no: document.getElementById('nc-card-no').value,
+                bank_name: document.getElementById('nc-bank-name').value,
+                routing_no: document.getElementById('nc-routing-no').value,
+                account_no: document.getElementById('nc-account-no').value,
+                account_type: document.getElementById('nc-account-type').value,
+                account_name: document.getElementById('nc-account-name').value
+            };
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/registrations`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+                const result = await resp.json();
+                
+                if (resp.ok && result.success) {
+                    alert(`✅ Customer Registered successfully!\nGenerated Shop ID: ${result.shop_id}`);
+                    document.getElementById('new-customer-form').reset();
+                    document.getElementById('nc-password').value = '';
+                    switchTab('existing-customers');
+                    // Refresh data
+                    fetchStats();
+                    fetchUsers();
+                } else {
+                    alert('❌ Error: ' + (result.error || 'Failed to register customer'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('❌ Server connection error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 Register & Create Customer Account';
+            }
+        }
 
         checkAuth().then(() => { fetchStats(); fetchUsers(); });
     </script>

@@ -505,3 +505,57 @@ select.input-control option {
     color: #ffffff !important;
 }
 
+/* Tabs Styling - Glassmorphic */
+.tabs-nav {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 0.5rem;
+}
+.tab-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.6rem 1.2rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+.tab-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.03);
+}
+.tab-btn.active {
+    color: #fff;
+    background: rgba(139, 92, 246, 0.15);
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.1);
+}
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -9px;
+    left: 15%;
+    width: 70%;
+    height: 3px;
+    background: #8B5CF6;
+    border-radius: 3px;
+}
+.form-section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #A78BFA;
+    margin-top: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-left: 3px solid #8B5CF6;
+    padding-left: 0.75rem;
+}
+
+

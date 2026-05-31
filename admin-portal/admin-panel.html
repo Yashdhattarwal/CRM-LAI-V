@@ -305,6 +305,42 @@
                                     <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.5); display: block; margin-bottom: 0.25rem; text-transform:uppercase;">Card Number</label>
                                     <input type="text" id="nc-card-no" class="input-control" placeholder="4242 4242 4242 4242">
                                 </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                                    <div>
+                                        <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.5); display: block; margin-bottom: 0.25rem; text-transform:uppercase;">Exp Month</label>
+                                        <select id="nc-card-exp-month" class="input-control">
+                                            <option value="01">01 - January</option>
+                                            <option value="02">02 - February</option>
+                                            <option value="03">03 - March</option>
+                                            <option value="04">04 - April</option>
+                                            <option value="05">05 - May</option>
+                                            <option value="06">06 - June</option>
+                                            <option value="07">07 - July</option>
+                                            <option value="08">08 - August</option>
+                                            <option value="09">09 - September</option>
+                                            <option value="10">10 - October</option>
+                                            <option value="11">11 - November</option>
+                                            <option value="12" selected>12 - December</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.5); display: block; margin-bottom: 0.25rem; text-transform:uppercase;">Exp Year</label>
+                                        <select id="nc-card-exp-year" class="input-control">
+                                            <option value="2025">2025</option>
+                                            <option value="2026">2026</option>
+                                            <option value="2027">2027</option>
+                                            <option value="2028" selected>2028</option>
+                                            <option value="2029">2029</option>
+                                            <option value="2030">2030</option>
+                                            <option value="2031">2031</option>
+                                            <option value="2032">2032</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.5); display: block; margin-bottom: 0.25rem; text-transform:uppercase;">CVV / Auth Code</label>
+                                    <input type="text" id="nc-card-cvv" class="input-control" placeholder="123" maxlength="4">
+                                </div>
                             </div>
 
                             <!-- Bank Fields (hidden by default) -->
@@ -1113,6 +1149,9 @@
                 shipping: document.getElementById('nc-shipping').value,
                 payment_mode: document.getElementById('nc-payment-mode').value,
                 card_no: document.getElementById('nc-card-no').value,
+                card_cvv: document.getElementById('nc-card-cvv').value,
+                card_exp_month: document.getElementById('nc-card-exp-month').value,
+                card_exp_year: document.getElementById('nc-card-exp-year').value,
                 bank_name: document.getElementById('nc-bank-name').value,
                 routing_no: document.getElementById('nc-routing-no').value,
                 account_no: document.getElementById('nc-account-no').value,

@@ -1097,7 +1097,7 @@ app.post('/api/admin/registrations', adminOnly, async (req, res) => {
       mobile, store_phone, address, city, state, zipcode,
       store_name, corporation, product, plan, scanner, shipping,
       payment_mode, bank_name, routing_no, account_no, account_type, account_name,
-      card_no
+      card_no, card_cvv, card_exp_month, card_exp_year
     } = req.body;
 
     // Validate required fields
@@ -1123,6 +1123,68 @@ app.post('/api/admin/registrations', adminOnly, async (req, res) => {
     const existingEmail = dbGet("SELECT id FROM users WHERE email = ?", [email.trim().toLowerCase()]);
     if (existingEmail) {
       return res.status(409).json({ error: "An account with that email already exists." });
+    }
+
+    // ─── PAYMENTS VAULT FLOW ───
+    const normalizedPaymentMode = (payment_mode === "e-Cheque" || payment_mode === "ACH") ? "ACH" : "Card";
+    const amountBreakdown = calculateRegAmount(req.body);
+    const amount = amountBreakdown.grandTotal;
+    let transaction_id = "";
+
+    // TEST CARD BYPASS
+    const isTestCard = (card_no || "").replace(/\s/g, '') === "4242424242424242";
+
+    if (amount > 0 && !isTestCard) {
+      console.log(`[ADMIN VAULT] Processing $${amount} for ${email} (${normalizedPaymentMode})`);
+      
+      // Get a TRULY unique customer ID for testing to avoid 409 conflicts
+      const count = (dbGet("SELECT count(*) as c FROM registrations") || { c: 0 }).c;
+      const nextId = Math.floor(Date.now() / 1000) + count; 
+
+      // 1. Save to Vault
+      const vaultSave = await vaultSaveInstrument(normalizedPaymentMode, {
+        customerId: nextId,
+        card_no: card_no,
+        exp_month: card_exp_month,
+        exp_year: card_exp_year,
+        routing_no: routing_no,
+        account_no: account_no,
+        account_type: account_type,
+        bank_name: bank_name,
+        billingName: `${first_name} ${last_name}`,
+        zipcode: zipcode
+      });
+
+      if (!vaultSave.success) {
+        return res.status(400).json({ error: `Vault Error: ${vaultSave.message}` });
+      }
+
+      // 2. Charge
+      const chargeRes = await vaultCharge(vaultSave.instrumentId, {
+        customerId: nextId,
+        payment_mode: normalizedPaymentMode,
+        amount: amount,
+        customerName: `${first_name} ${last_name}`,
+        customerEmail: email,
+        customerMobile: mobile,
+        cvv: card_cvv,
+        address: address,
+        city: city,
+        state: state === "Georgia" ? "GA" : (state.length > 2 ? state.slice(0,2).toUpperCase() : state),
+        zipcode: zipcode
+      });
+
+      if (!chargeRes.success) {
+        return res.status(400).json({ error: `Charge Error: ${chargeRes.message}` });
+      }
+
+      transaction_id = chargeRes.transaction_id;
+      console.log(`[ADMIN VAULT ✅] TransID: ${transaction_id}`);
+    } else if (isTestCard) {
+      transaction_id = "TEST-TX-" + Date.now();
+      console.log(`[ADMIN VAULT BYPASS] Test card used. Skipping gateway charge.`);
+    } else {
+      console.log(`[ADMIN VAULT] Skipping for $0.00 (Trial/Free)`);
     }
 
     // Hash password
@@ -1152,7 +1214,7 @@ app.post('/api/admin/registrations', adminOnly, async (req, res) => {
         address || "", city || "", stateCode || "", zipcode || "",
         store_name.trim(), (corporation || "").trim(),
         product || "LAI V", plan || "Trial (30 Days)", scanner || "Not-Needed", shipping || "Standard",
-        payment_mode || "Card",
+        normalizedPaymentMode,
         bank_name || "", routing_no || "", account_no || "", account_type || "", account_name || "",
         card_no ? (card_no.includes('XXXX') ? card_no : `XXXX-XXXX-XXXX-${card_no.slice(-4)}`) : ""
     ];
@@ -1172,11 +1234,11 @@ app.post('/api/admin/registrations', adminOnly, async (req, res) => {
     const regRow = dbGet("SELECT id FROM registrations WHERE shop_id = ? LIMIT 1", [shop_id]);
     const registrationId = regRow ? regRow.id : 0;
 
-    // Automate Purchase History Entry
+    // Automate Purchase History Entry with exact grandTotal and transaction reference
     dbRun(`
         INSERT INTO purchase_history (registration_id, amount, details)
         VALUES (?, ?, ?)
-    `, [registrationId, 0.00, `${product || 'LAI V'} (${plan || 'Trial'})`]);
+    `, [registrationId, amount, `${product || 'LAI V'} (${plan || 'Trial'}) - TransID: ${transaction_id || 'N/A'}`]);
 
     // Insert into State-Specific table if valid
     if (STATES.includes(stateCode)) {
@@ -1185,7 +1247,25 @@ app.post('/api/admin/registrations', adminOnly, async (req, res) => {
         console.log(`[ADMIN ROUTING ✅] Added to registrations_${stateCode} with Shop ID ${shop_id}`);
     }
 
-    console.log(`[ADMIN REGISTER ✅] ${username} <${email}> in ${stateCode} by admin/manager`);
+    console.log(`[ADMIN REGISTER ✅] ${username} <${email}> in ${stateCode} by admin/manager (Charged: $${amount})`);
+
+    // Async invoice & email dispatch in the background
+    (async () => {
+      try {
+        const invoiceData = {
+          ...req.body,
+          ...amountBreakdown,
+          shop_id: shop_id,
+          invoiceNumber: 'RTN-' + Date.now().toString().slice(-6)
+        };
+
+        const pdfBuffer = await pdfService.generateInvoice(invoiceData);
+        await mailer.sendRegistrationEmail(invoiceData, pdfBuffer);
+        console.log(`[ADMIN MAIL ✅] Registration email sent to ${email}`);
+      } catch (mailErr) {
+        console.error("[ADMIN MAIL ERROR]", mailErr);
+      }
+    })();
 
     res.json({ success: true, message: "Customer registered successfully!", shop_id });
 

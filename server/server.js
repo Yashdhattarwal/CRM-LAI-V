@@ -1470,6 +1470,130 @@ app.get('/api/admin/stats', adminOnly, (req, res) => {
   }
 });
 
+// GET /api/admin/analytics
+app.get('/api/admin/analytics', adminOnly, (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+
+    // 1. Core KPIs
+    const totalRegistrations = (dbGet('SELECT COUNT(*) as c FROM registrations') || {}).c || 0;
+    const activeRegistrations = (dbGet(`SELECT COUNT(*) as c FROM registrations WHERE expiry_date IS NOT NULL AND expiry_date != '' AND DATE(expiry_date) >= DATE(?)`, [today]) || {}).c || 0;
+    const inactiveRegistrations = (dbGet(`SELECT COUNT(*) as c FROM registrations WHERE expiry_date IS NULL OR expiry_date = '' OR DATE(expiry_date) < DATE(?)`, [today]) || {}).c || 0;
+    const totalRevenue = (dbGet('SELECT SUM(amount) as s FROM purchase_history') || {}).s || 0;
+
+    // 2. Daily revenue & registrations (last 30 days)
+    const dailyData = dbAll(`
+      SELECT 
+        d.date,
+        IFNULL(r.count, 0) as registrations,
+        IFNULL(p.revenue, 0) as revenue
+      FROM (
+        SELECT DATE('now', '-' || (t.n) || ' days') as date
+        FROM (
+          SELECT 0 as n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL
+          SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9 UNION ALL
+          SELECT 10 UNION ALL SELECT 11 UNION ALL SELECT 12 UNION ALL SELECT 13 UNION ALL SELECT 14 UNION ALL
+          SELECT 15 UNION ALL SELECT 16 UNION ALL SELECT 17 UNION ALL SELECT 18 UNION ALL SELECT 19 UNION ALL
+          SELECT 20 UNION ALL SELECT 21 UNION ALL SELECT 22 UNION ALL SELECT 23 UNION ALL SELECT 24 UNION ALL
+          SELECT 25 UNION ALL SELECT 26 UNION ALL SELECT 27 UNION ALL SELECT 28 UNION ALL SELECT 29
+        ) t
+      ) d
+      LEFT JOIN (
+        SELECT DATE(submitted_at) as date, COUNT(*) as count 
+        FROM registrations 
+        GROUP BY DATE(submitted_at)
+      ) r ON d.date = r.date
+      LEFT JOIN (
+        SELECT DATE(invoice_date) as date, SUM(amount) as revenue 
+        FROM purchase_history 
+        GROUP BY DATE(invoice_date)
+      ) p ON d.date = p.date
+      ORDER BY d.date ASC
+    `);
+
+    // 3. Weekly revenue & registrations (last 12 weeks)
+    const weeklyData = dbAll(`
+      SELECT 
+        strftime('%Y-W%W', invoice_date) as week,
+        SUM(amount) as revenue,
+        (SELECT COUNT(*) FROM registrations WHERE strftime('%Y-W%W', submitted_at) = strftime('%Y-W%W', invoice_date)) as registrations
+      FROM purchase_history
+      WHERE invoice_date >= DATE('now', '-84 days')
+      GROUP BY week
+      ORDER BY week ASC
+    `);
+
+    // 4. Monthly revenue & registrations (last 12 months)
+    const monthlyData = dbAll(`
+      SELECT 
+        strftime('%Y-%m', invoice_date) as month,
+        SUM(amount) as revenue,
+        (SELECT COUNT(*) FROM registrations WHERE strftime('%Y-%m', submitted_at) = strftime('%Y-%m', invoice_date)) as registrations
+      FROM purchase_history
+      WHERE invoice_date >= DATE('now', '-365 days')
+      GROUP BY month
+      ORDER BY month ASC
+    `);
+
+    // 5. Yearly revenue & registrations
+    const yearlyData = dbAll(`
+      SELECT 
+        strftime('%Y', invoice_date) as year,
+        SUM(amount) as revenue,
+        (SELECT COUNT(*) FROM registrations WHERE strftime('%Y', submitted_at) = strftime('%Y', invoice_date)) as registrations
+      FROM purchase_history
+      GROUP BY year
+      ORDER BY year ASC
+    `);
+
+    // 6. State-wise breakdown
+    const stateData = dbAll(`
+      SELECT 
+        IFNULL(NULLIF(r.state, ''), 'Unknown') as state,
+        COUNT(r.id) as count,
+        SUM(IFNULL(ph.amount, 0)) as revenue
+      FROM registrations r
+      LEFT JOIN purchase_history ph ON r.id = ph.registration_id
+      GROUP BY state
+      ORDER BY revenue DESC
+    `);
+
+    // 7. Recent Financial Overview (Transactions list)
+    const transactions = dbAll(`
+      SELECT 
+        ph.id,
+        ph.amount,
+        ph.details,
+        ph.invoice_date,
+        r.first_name || ' ' || r.last_name as customer_name,
+        r.store_name,
+        r.state
+      FROM purchase_history ph
+      LEFT JOIN registrations r ON ph.registration_id = r.id
+      ORDER BY ph.invoice_date DESC
+      LIMIT 10
+    `);
+
+    res.json({
+      kpis: {
+        totalRegistrations,
+        activeRegistrations,
+        inactiveRegistrations,
+        totalRevenue: Math.round(totalRevenue * 100) / 100
+      },
+      daily: dailyData,
+      weekly: weeklyData,
+      monthly: monthlyData,
+      yearly: yearlyData,
+      stateWise: stateData,
+      transactions: transactions
+    });
+  } catch (err) {
+    console.error('[ADMIN ANALYTICS ERROR]', err);
+    res.status(500).json({ error: 'Failed to fetch business analytics' });
+  }
+});
+
 // ─── Support Log (Comments) ───────────────────────────────────────────────────
 
 // GET /api/admin/support-comments/:regId

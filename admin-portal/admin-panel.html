@@ -299,6 +299,21 @@
                                 </select>
                             </div>
 
+                            <!-- Test Mode Control Box -->
+                            <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.05)); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <span style="background: #8B5CF6; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase;">Test Mode</span>
+                                        <span style="font-size: 0.8rem; font-weight: 700; color: #a78bfa;">Sandbox Autofill</span>
+                                    </div>
+                                    <span style="font-size: 0.72rem; color: rgba(255,255,255,0.6); line-height: 1.3;">Populate sandbox accounts for instant administrative validation.</span>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
+                                    <button type="button" onclick="autofillNCTestCard()" style="background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.4); color: #c084fc; border-radius: 8px; padding: 0.55rem 0.85rem; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">💳 Test Card</button>
+                                    <button type="button" onclick="autofillNCTestACH()" style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; border-radius: 8px; padding: 0.55rem 0.85rem; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">📄 Test ACH</button>
+                                </div>
+                            </div>
+
                             <!-- Card Fields -->
                             <div id="nc-card-fields" style="background: rgba(255, 255, 255, 0.02); padding: 1.25rem; border-radius: 16px; margin-bottom: 1rem; border: 1px solid rgba(255, 255, 255, 0.04);">
                                 <div style="margin-bottom: 0.75rem;">
@@ -1110,6 +1125,29 @@
                 cardFields.style.display = 'none';
                 bankFields.style.display = 'block';
             }
+        }
+
+        // Autofill Test Card details
+        function autofillNCTestCard() {
+            document.getElementById('nc-payment-mode').value = 'Card';
+            toggleNCPaymentFields();
+            
+            document.getElementById('nc-card-no').value = '4242 4242 4242 4242';
+            document.getElementById('nc-card-exp-month').value = '12';
+            document.getElementById('nc-card-exp-year').value = '2028';
+            document.getElementById('nc-card-cvv').value = '123';
+        }
+
+        // Autofill Test ACH details
+        function autofillNCTestACH() {
+            document.getElementById('nc-payment-mode').value = 'e-Cheque';
+            toggleNCPaymentFields();
+            
+            document.getElementById('nc-bank-name').value = 'Sandbox e-Bank';
+            document.getElementById('nc-routing-no').value = '021000021';
+            document.getElementById('nc-account-no').value = '123456789';
+            document.getElementById('nc-account-type').value = 'Checking';
+            document.getElementById('nc-account-name').value = 'Jane Doe LLC';
         }
 
         // Generate Secure Passcode/Password

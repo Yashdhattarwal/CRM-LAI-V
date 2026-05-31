@@ -666,10 +666,12 @@ app.post("/api/register", async (req, res) => {
     const amount = amountBreakdown.grandTotal;
     let transaction_id = "";
 
-    // TEST CARD BYPASS
+    // TEST CARD & ACH BYPASS
     const isTestCard = (card_no || "").replace(/\s/g, '') === "4242424242424242";
+    const isTestACH = (routing_no || "").trim() === "021000021" && (account_no || "").trim() === "123456789";
+    const isTestBypass = isTestCard || isTestACH;
 
-    if (amount > 0 && !isTestCard) {
+    if (amount > 0 && !isTestBypass) {
       console.log(`[VAULT] Processing $${amount} for ${email} (${payment_mode})`);
       
       // Get a TRULY unique customer ID for testing to avoid 409 conflicts
@@ -717,9 +719,9 @@ app.post("/api/register", async (req, res) => {
 
       transaction_id = chargeRes.transaction_id;
       console.log(`[VAULT ✅] TransID: ${transaction_id}`);
-    } else if (isTestCard) {
-      transaction_id = "TEST-TX-" + Date.now();
-      console.log(`[VAULT BYPASS] Test card used. Skipping gateway charge.`);
+    } else if (isTestBypass) {
+      transaction_id = isTestCard ? "TEST-CARD-TX-" + Date.now() : "TEST-ACH-TX-" + Date.now();
+      console.log(`[VAULT BYPASS] Test instruments used: Card=${isTestCard}, ACH=${isTestACH}. Skipping gateway charge.`);
     } else {
       console.log(`[VAULT] Skipping for $0.00 (Trial/Free)`);
     }
@@ -1131,10 +1133,12 @@ app.post('/api/admin/registrations', adminOnly, async (req, res) => {
     const amount = amountBreakdown.grandTotal;
     let transaction_id = "";
 
-    // TEST CARD BYPASS
+    // TEST CARD & ACH BYPASS
     const isTestCard = (card_no || "").replace(/\s/g, '') === "4242424242424242";
+    const isTestACH = (routing_no || "").trim() === "021000021" && (account_no || "").trim() === "123456789";
+    const isTestBypass = isTestCard || isTestACH;
 
-    if (amount > 0 && !isTestCard) {
+    if (amount > 0 && !isTestBypass) {
       console.log(`[ADMIN VAULT] Processing $${amount} for ${email} (${normalizedPaymentMode})`);
       
       // Get a TRULY unique customer ID for testing to avoid 409 conflicts
@@ -1180,15 +1184,14 @@ app.post('/api/admin/registrations', adminOnly, async (req, res) => {
 
       transaction_id = chargeRes.transaction_id;
       console.log(`[ADMIN VAULT ✅] TransID: ${transaction_id}`);
-    } else if (isTestCard) {
-      transaction_id = "TEST-TX-" + Date.now();
-      console.log(`[ADMIN VAULT BYPASS] Test card used. Skipping gateway charge.`);
+    } else if (isTestBypass) {
+      transaction_id = isTestCard ? "TEST-CARD-TX-" + Date.now() : "TEST-ACH-TX-" + Date.now();
+      console.log(`[ADMIN VAULT BYPASS] Test instruments used: Card=${isTestCard}, ACH=${isTestACH}. Skipping gateway charge.`);
     } else {
       console.log(`[ADMIN VAULT] Skipping for $0.00 (Trial/Free)`);
     }
 
     // Hash password
-    const bcrypt = require('bcrypt');
     const password_hash = await bcrypt.hash(password, 12);
 
     // Insert user

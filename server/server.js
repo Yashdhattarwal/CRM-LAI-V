@@ -53,11 +53,76 @@ app.use(session({
 }));
 
 // ─── Database helpers ─────────────────────────────────────────────────────────
+const sql = require('mssql');
+
+const mssqlConfig = {
+    user: 'rtnsqlapplicationbot',
+    password: 'RtnP@ssw0rd@)@#',
+    server: '52.186.36.241',
+    port: 1438,
+    database: 'RTNMaster_dev',
+    options: {
+        encrypt: true,
+        trustServerCertificate: true
+    },
+    pool: {
+        max: 10,
+        min: 0,
+        idleTimeoutMillis: 30000
+    }
+};
+
+let mssqlPool = null;
 let db;
 
 function saveDb() {
   const data = db.export();
   fs.writeFileSync(DB_PATH, Buffer.from(data));
+}
+
+// Helper to asynchronously execute SQLite mutations on Microsoft SQL Server
+function runMssqlQuery(queryStr, params = []) {
+    if (!mssqlPool) return Promise.resolve();
+    
+    let converted = queryStr;
+    
+    // Replace SQLite specific INSERT OR IGNORE with standard INSERT
+    converted = converted.replace(/INSERT OR IGNORE/gi, 'INSERT');
+
+    // Replace SQLite specific INSERT OR REPLACE with standard INSERT
+    if (converted.toUpperCase().includes('INSERT OR REPLACE INTO')) {
+        const match = converted.match(/INSERT OR REPLACE INTO\s+(\w+)\s*\((.*?)\)\s*VALUES\s*\((.*?)\)/is);
+        if (match) {
+            const tableName = match[1];
+            const cols = match[2].split(',').map(c => c.trim());
+            const idColIndex = cols.indexOf('id');
+            if (idColIndex !== -1 && params[idColIndex] !== undefined) {
+                // Pre-delete record on MS SQL to avoid primary key/unique constraint violations
+                const deleteReq = mssqlPool.request();
+                deleteReq.input('delete_id', params[idColIndex]);
+                deleteReq.query(`DELETE FROM ${tableName} WHERE id = @delete_id`).catch(e => {
+                    console.warn(`[MSSQL DUAL-SYNC WARNING] Pre-delete failed for ${tableName}:`, e.message);
+                });
+            }
+        }
+        converted = converted.replace(/INSERT OR REPLACE INTO/gi, 'INSERT INTO');
+    }
+    
+    // Replace ? placeholders with T-SQL @p0, @p1, @p2...
+    let paramIndex = 0;
+    converted = converted.replace(/\?/g, () => {
+        return `@p${paramIndex++}`;
+    });
+
+    const req = mssqlPool.request();
+    params.forEach((val, i) => {
+        req.input(`p${i}`, val);
+    });
+
+    return req.query(converted).catch(err => {
+        console.warn(`[MSSQL DUAL-SYNC WARNING] Query failed on cloud MS SQL Server:`, err.message);
+        console.warn(`Query:`, converted);
+    });
 }
 
 // ─── States List ─────────────────────────────────────────────────────────────
@@ -81,16 +146,469 @@ const STATE_NAME_TO_CODE = {
     'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY'
 };
 
+async function createMssqlTables() {
+    const schemas = [
+        `IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[users]') AND type in (N'U'))
+         CREATE TABLE users (
+             id INT IDENTITY(1,1) PRIMARY KEY,
+             username NVARCHAR(255) UNIQUE NOT NULL,
+             email NVARCHAR(255) UNIQUE NOT NULL,
+             password_hash NVARCHAR(255) NOT NULL,
+             passcode NVARCHAR(255),
+             first_name NVARCHAR(255),
+             last_name NVARCHAR(255),
+             role NVARCHAR(50) DEFAULT 'customer',
+             is_active INT DEFAULT 1,
+             created_at DATETIME DEFAULT GETDATE()
+         )`,
+         
+         `IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[registrations]') AND type in (N'U'))
+          CREATE TABLE registrations (
+              id INT IDENTITY(1,1) PRIMARY KEY,
+              user_id INT,
+              shop_id NVARCHAR(255) UNIQUE,
+              passcode NVARCHAR(255),
+              first_name NVARCHAR(255) NOT NULL,
+              last_name NVARCHAR(255) NOT NULL,
+              email NVARCHAR(255) NOT NULL,
+              mobile NVARCHAR(255),
+              store_phone NVARCHAR(255),
+              address NVARCHAR(255),
+              city NVARCHAR(255),
+              state NVARCHAR(255),
+              zipcode NVARCHAR(255),
+              store_name NVARCHAR(255),
+              corporation NVARCHAR(255),
+              product NVARCHAR(255),
+              [plan] NVARCHAR(255),
+              scanner NVARCHAR(255),
+              shipping NVARCHAR(255),
+              payment_mode NVARCHAR(255),
+              bank_name NVARCHAR(255),
+              routing_no NVARCHAR(255),
+              account_no NVARCHAR(255),
+              account_type NVARCHAR(255),
+              account_name NVARCHAR(255),
+              card_no NVARCHAR(255),
+              status NVARCHAR(255) DEFAULT 'pending',
+              expiry_date NVARCHAR(255),
+              submitted_at DATETIME DEFAULT GETDATE()
+          )`,
+          
+          `IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[support_logs]') AND type in (N'U'))
+           CREATE TABLE support_logs (
+               id INT IDENTITY(1,1) PRIMARY KEY,
+               registration_id INT NOT NULL,
+               comment NVARCHAR(MAX) NOT NULL,
+               caller_number   NVARCHAR(255),
+               staff_name      NVARCHAR(255),
+               staff_id        INT,
+               attachment_path NVARCHAR(500),
+               created_at      DATETIME DEFAULT GETDATE()
+           )`,
+           
+           `IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[audit_logs]') AND type in (N'U'))
+            CREATE TABLE audit_logs (
+                id INT IDENTITY(1,1) PRIMARY KEY,
+                user_id INT NOT NULL,
+                resource_type NVARCHAR(255) NOT NULL,
+                resource_id NVARCHAR(255) NOT NULL,
+                changes NVARCHAR(MAX) NOT NULL,
+                timestamp DATETIME DEFAULT GETDATE()
+            )`,
+            
+            `IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[purchase_history]') AND type in (N'U'))
+             CREATE TABLE purchase_history (
+                 id INT IDENTITY(1,1) PRIMARY KEY,
+                 registration_id INT NOT NULL,
+                 amount FLOAT NOT NULL,
+                 details NVARCHAR(MAX) NOT NULL,
+                 invoice_date DATETIME DEFAULT GETDATE(),
+                 attachment_path NVARCHAR(500)
+             )`,
+             
+             `IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[deleted_registrations]') AND type in (N'U'))
+              CREATE TABLE deleted_registrations (
+                  id INT IDENTITY(1,1) PRIMARY KEY,
+                  original_id INT,
+                  store_name NVARCHAR(255),
+                  first_name NVARCHAR(255),
+                  last_name NVARCHAR(255),
+                  email NVARCHAR(255),
+                  shop_id NVARCHAR(255),
+                  deleted_by_name NVARCHAR(255),
+                  deleted_by_id INT,
+                  deletion_reason NVARCHAR(MAX),
+                  deleted_at DATETIME DEFAULT GETDATE(),
+                  full_data_json NVARCHAR(MAX)
+              )`,
+              
+              `IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[attendance]') AND type in (N'U'))
+               CREATE TABLE attendance (
+                   id INT IDENTITY(1,1) PRIMARY KEY,
+                   user_id INT NOT NULL,
+                   login_time DATETIME,
+                   logout_time DATETIME,
+                   date DATE DEFAULT GETDATE()
+               )`,
+
+              `IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[user_status_logs]') AND type in (N'U'))
+               CREATE TABLE user_status_logs (
+                   id INT IDENTITY(1,1) PRIMARY KEY,
+                   user_id INT NOT NULL,
+                   status NVARCHAR(255) NOT NULL,
+                   reason NVARCHAR(MAX) NOT NULL,
+                   changed_by_name NVARCHAR(255) NOT NULL,
+                   changed_by_id INT NOT NULL,
+                   created_at DATETIME DEFAULT GETDATE()
+               )`,
+
+              `IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[customer_status_logs]') AND type in (N'U'))
+               CREATE TABLE customer_status_logs (
+                   id INT IDENTITY(1,1) PRIMARY KEY,
+                   registration_id INT NOT NULL,
+                   status NVARCHAR(255) NOT NULL,
+                   reason NVARCHAR(MAX) NOT NULL,
+                   changed_by_name NVARCHAR(255) NOT NULL,
+                   changed_by_id INT NOT NULL,
+                   created_at DATETIME DEFAULT GETDATE()
+               )`,
+               
+               `IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[RTNTicketConfig]') AND type in (N'U'))
+                CREATE TABLE RTNTicketConfig (
+                    id INT PRIMARY KEY,
+                    StateId INT NOT NULL,
+                    State NVARCHAR(255) NOT NULL,
+                    TicketLength INT NOT NULL,
+                    TicketId_start INT NOT NULL,
+                    TicketId_length INT NOT NULL,
+                    PackNo_start INT NOT NULL,
+                    PackNo_length INT NOT NULL,
+                    PackPos_start INT NOT NULL,
+                    PackPos_length INT NOT NULL
+                )`
+    ];
+
+    for (const q of schemas) {
+        await mssqlPool.request().query(q).catch(e => {
+            console.error('[MSSQL SCHEMA ERROR]', e.message);
+        });
+    }
+
+    // Dynamic state tables
+    for (const st of STATES) {
+        const stateRegSchema = `
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[registrations_${st}]') AND type in (N'U'))
+            CREATE TABLE registrations_${st} (
+                id INT IDENTITY(1,1) PRIMARY KEY,
+                user_id INT,
+                shop_id NVARCHAR(255) UNIQUE,
+                passcode NVARCHAR(255),
+                first_name NVARCHAR(255) NOT NULL,
+                last_name NVARCHAR(255) NOT NULL,
+                email NVARCHAR(255) NOT NULL,
+                mobile NVARCHAR(255),
+                store_phone NVARCHAR(255),
+                address NVARCHAR(255),
+                city NVARCHAR(255),
+                state NVARCHAR(255),
+                zipcode NVARCHAR(255),
+                store_name NVARCHAR(255),
+                corporation NVARCHAR(255),
+                product NVARCHAR(255),
+                [plan] NVARCHAR(255),
+                scanner NVARCHAR(255),
+                shipping NVARCHAR(255),
+                payment_mode NVARCHAR(255),
+                bank_name NVARCHAR(255),
+                routing_no NVARCHAR(255),
+                account_no NVARCHAR(255),
+                account_type NVARCHAR(255),
+                account_name NVARCHAR(255),
+                card_no NVARCHAR(255),
+                status NVARCHAR(255) DEFAULT 'pending',
+                expiry_date NVARCHAR(255),
+                submitted_at DATETIME DEFAULT GETDATE()
+            )
+        `;
+        const stateTicketSchema = `
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[RTNTicketConfig_${st}]') AND type in (N'U'))
+            CREATE TABLE RTNTicketConfig_${st} (
+                id INT PRIMARY KEY,
+                StateId INT NOT NULL,
+                State NVARCHAR(255) NOT NULL,
+                TicketLength INT NOT NULL,
+                TicketId_start INT NOT NULL,
+                TicketId_length INT NOT NULL,
+                PackNo_start INT NOT NULL,
+                PackNo_length INT NOT NULL,
+                PackPos_start INT NOT NULL,
+                PackPos_length INT NOT NULL
+            )
+        `;
+        await mssqlPool.request().query(stateRegSchema).catch(e => {});
+        await mssqlPool.request().query(stateTicketSchema).catch(e => {});
+    }
+}
+
+async function syncLegacyCsharpData() {
+    if (!mssqlPool) return;
+    try {
+        console.log('[LEGACY SYNC] Checking for legacy user and shop records to import...');
+        
+        // 1. Fetch all legacy users
+        const legacyUsersRes = await mssqlPool.request().query('SELECT Id, UserName, Passcode, EmailId, PhoneNo1, FirstName, LastName, State, Zip FROM RTNUserMaster');
+        const legacyUsers = legacyUsersRes.recordset;
+        
+        console.log(`[LEGACY SYNC] Found ${legacyUsers.length} legacy users. Synchronizing to 'users'...`);
+        
+        // Load existing emails in our system to avoid duplicates
+        const existingEmails = new Set();
+        const existingUsersRes = await mssqlPool.request().query('SELECT email FROM users');
+        existingUsersRes.recordset.forEach(u => {
+            if (u.email) existingEmails.add(u.email.toLowerCase().trim());
+        });
+
+        const salt = await bcrypt.genSalt(10);
+        
+        // Import users
+        let userImportCount = 0;
+        for (const u of legacyUsers) {
+            const email = (u.EmailId || '').toLowerCase().trim();
+            if (!email) continue;
+            if (existingEmails.has(email)) continue; // Skip already imported or existing
+            
+            const username = (u.UserName || '').trim() || `customer_${u.Id}`;
+            const passcode = (u.Passcode || '').trim() || 'RTN@LAI5';
+            
+            // Hash passcode for secure logins in Node app
+            const password_hash = await bcrypt.hash(passcode, salt);
+            
+            try {
+                // Insert into MS SQL users table
+                const insertUserReq = mssqlPool.request();
+                insertUserReq.input('id', u.Id);
+                insertUserReq.input('username', username);
+                insertUserReq.input('email', email);
+                insertUserReq.input('password_hash', password_hash);
+                insertUserReq.input('passcode', passcode);
+                insertUserReq.input('first_name', u.FirstName || '');
+                insertUserReq.input('last_name', u.LastName || '');
+                
+                await insertUserReq.query(`
+                    SET IDENTITY_INSERT users ON;
+                    INSERT INTO users (id, username, email, password_hash, passcode, first_name, last_name, role, is_active)
+                    VALUES (@id, @username, @email, @password_hash, @passcode, @first_name, @last_name, 'customer', 1);
+                    SET IDENTITY_INSERT users OFF;
+                `);
+                
+                // Also insert into our local SQLite instance
+                db.run(`
+                    INSERT OR REPLACE INTO users (id, username, email, password_hash, passcode, first_name, last_name, role, is_active)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'customer', 1)
+                `, [u.Id, username, email, password_hash, passcode, u.FirstName || '', u.LastName || '']);
+                
+                existingEmails.add(email);
+                userImportCount++;
+            } catch (err) {
+                try {
+                    const insertUserReq = mssqlPool.request();
+                    insertUserReq.input('username', username);
+                    insertUserReq.input('email', email);
+                    insertUserReq.input('password_hash', password_hash);
+                    insertUserReq.input('passcode', passcode);
+                    insertUserReq.input('first_name', u.FirstName || '');
+                    insertUserReq.input('last_name', u.LastName || '');
+                    
+                    const res = await insertUserReq.query(`
+                        INSERT INTO users (username, email, password_hash, passcode, first_name, last_name, role, is_active)
+                        VALUES (@username, @email, @password_hash, @passcode, @first_name, @last_name, 'customer', 1);
+                        SELECT SCOPE_IDENTITY() as new_id;
+                    `);
+                    
+                    const newId = res.recordset[0]?.new_id;
+                    if (newId) {
+                        db.run(`
+                            INSERT OR REPLACE INTO users (id, username, email, password_hash, passcode, first_name, last_name, role, is_active)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, 'customer', 1)
+                        `, [newId, username, email, password_hash, passcode, u.FirstName || '', u.LastName || '']);
+                    }
+                    existingEmails.add(email);
+                    userImportCount++;
+                } catch (e) {}
+            }
+        }
+        console.log(`[LEGACY SYNC] Successfully imported ${userImportCount} new users.`);
+        
+        // 2. Fetch all legacy shops
+        const legacyShopsRes = await mssqlPool.request().query('SELECT Id, EmailId, LocationName, LegalName, Address, StreetNo, Street, City, State, Zip, Phone, Phone2 FROM RTNShopMaster');
+        const legacyShops = legacyShopsRes.recordset;
+        
+        console.log(`[LEGACY SYNC] Found ${legacyShops.length} legacy shops. Synchronizing to 'registrations'...`);
+        
+        // Load existing shop_ids
+        const existingShops = new Set();
+        const existingRegsRes = await mssqlPool.request().query('SELECT shop_id FROM registrations');
+        existingRegsRes.recordset.forEach(r => {
+            if (r.shop_id) existingShops.add(r.shop_id.toLowerCase().trim());
+        });
+
+        let shopImportCount = 0;
+        
+        // Map email to user ID in SQLite
+        const emailToUserId = {};
+        const allUsers = dbAll("SELECT id, email FROM users");
+        allUsers.forEach(u => {
+            if (u.email) emailToUserId[u.email.toLowerCase().trim()] = u.id;
+        });
+
+        for (const s of legacyShops) {
+            const shop_id = String(s.Id).trim();
+            if (existingShops.has(shop_id.toLowerCase())) continue; // Skip existing
+            
+            const email = (s.EmailId || '').toLowerCase().trim();
+            const user_id = emailToUserId[email] || null;
+            
+            // Format address
+            let fullAddress = (s.Address || '').trim();
+            if (!fullAddress && (s.StreetNo || s.Street)) {
+                fullAddress = `${s.StreetNo || ''} ${s.Street || ''}`.trim();
+            }
+            
+            const storeName = (s.LocationName || '').trim() || 'Store';
+            const corpName = (s.LegalName || '').trim() || 'Corporation';
+            const mobile = (s.Phone || '').trim() || '';
+            const phone = (s.Phone2 || '').trim() || '';
+            
+            let firstName = 'Valued';
+            let lastName = 'Customer';
+            const linkedUser = dbGet("SELECT first_name, last_name FROM users WHERE id = ?", [user_id]);
+            if (linkedUser) {
+                firstName = linkedUser.first_name || firstName;
+                lastName = linkedUser.last_name || lastName;
+            }
+
+            const stateCode = (s.State || 'GA').toUpperCase().trim();
+            const dateOneYearOut = new Date();
+            dateOneYearOut.setFullYear(dateOneYearOut.getFullYear() + 1);
+            const expiryDate = dateOneYearOut.toISOString().split('T')[0];
+
+            try {
+                const insertRegReq = mssqlPool.request();
+                insertRegReq.input('id', s.Id);
+                insertRegReq.input('user_id', user_id);
+                insertRegReq.input('shop_id', shop_id);
+                insertRegReq.input('first_name', firstName);
+                insertRegReq.input('last_name', lastName);
+                insertRegReq.input('email', email || 'info@rtnlai.com');
+                insertRegReq.input('mobile', mobile);
+                insertRegReq.input('store_phone', phone);
+                insertRegReq.input('address', fullAddress);
+                insertRegReq.input('city', s.City || '');
+                insertRegReq.input('state', stateCode);
+                insertRegReq.input('zipcode', s.Zip || '');
+                insertRegReq.input('store_name', storeName);
+                insertRegReq.input('corporation', corpName);
+                insertRegReq.input('expiry_date', expiryDate);
+
+                await insertRegReq.query(`
+                    SET IDENTITY_INSERT registrations ON;
+                    INSERT INTO registrations (id, user_id, shop_id, first_name, last_name, email, mobile, store_phone, address, city, state, zipcode, store_name, corporation, product, [plan], status, expiry_date)
+                    VALUES (@id, @user_id, @shop_id, @first_name, @last_name, @email, @mobile, @store_phone, @address, @city, @state, @zipcode, @store_name, @corporation, 'LAI V', 'Yearly', 'active', @expiry_date);
+                    SET IDENTITY_INSERT registrations OFF;
+                `);
+                
+                // Mirror into state table
+                if (STATES.includes(stateCode)) {
+                    await mssqlPool.request().query(`
+                        SET IDENTITY_INSERT registrations_${stateCode} ON;
+                        INSERT INTO registrations_${stateCode} (id, user_id, shop_id, first_name, last_name, email, mobile, store_phone, address, city, state, zipcode, store_name, corporation, product, [plan], status, expiry_date)
+                        VALUES (${s.Id}, ${user_id || 'NULL'}, '${shop_id}', '${firstName}', '${lastName}', '${email || 'info@rtnlai.com'}', '${mobile}', '${phone}', '${fullAddress}', '${s.City || ''}', '${stateCode}', '${s.Zip || ''}', '${storeName}', '${corpName}', 'LAI V', 'Yearly', 'active', '${expiryDate}');
+                        SET IDENTITY_INSERT registrations_${stateCode} OFF;
+                    `).catch(e => {});
+                }
+
+                // Also insert into our local SQLite instance
+                db.run(`
+                    INSERT OR REPLACE INTO registrations (id, user_id, shop_id, first_name, last_name, email, mobile, store_phone, address, city, state, zipcode, store_name, corporation, product, plan, status, expiry_date)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'LAI V', 'Yearly', 'active', ?)
+                `, [s.Id, user_id, shop_id, firstName, lastName, email || 'info@rtnlai.com', mobile, phone, fullAddress, s.City || '', stateCode, s.Zip || '', storeName, corpName, expiryDate]);
+                
+                if (STATES.includes(stateCode)) {
+                    db.run(`
+                        INSERT OR REPLACE INTO registrations_${stateCode} (id, user_id, shop_id, first_name, last_name, email, mobile, store_phone, address, city, state, zipcode, store_name, corporation, product, plan, status, expiry_date)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'LAI V', 'Yearly', 'active', ?)
+                    `, [s.Id, user_id, shop_id, firstName, lastName, email || 'info@rtnlai.com', mobile, phone, fullAddress, s.City || '', stateCode, s.Zip || '', storeName, corpName, expiryDate]);
+                }
+
+                existingShops.add(shop_id.toLowerCase());
+                shopImportCount++;
+            } catch (err) {
+                try {
+                    const insertRegReq = mssqlPool.request();
+                    insertRegReq.input('user_id', user_id);
+                    insertRegReq.input('shop_id', shop_id);
+                    insertRegReq.input('first_name', firstName);
+                    insertRegReq.input('last_name', lastName);
+                    insertRegReq.input('email', email || 'info@rtnlai.com');
+                    insertRegReq.input('mobile', mobile);
+                    insertRegReq.input('store_phone', phone);
+                    insertRegReq.input('address', fullAddress);
+                    insertRegReq.input('city', s.City || '');
+                    insertRegReq.input('state', stateCode);
+                    insertRegReq.input('zipcode', s.Zip || '');
+                    insertRegReq.input('store_name', storeName);
+                    insertRegReq.input('corporation', corpName);
+                    insertRegReq.input('expiry_date', expiryDate);
+
+                    const res = await insertRegReq.query(`
+                        INSERT INTO registrations (user_id, shop_id, first_name, last_name, email, mobile, store_phone, address, city, state, zipcode, store_name, corporation, product, [plan], status, expiry_date)
+                        VALUES (@user_id, @shop_id, @first_name, @last_name, @email, @mobile, @store_phone, @address, @city, @state, @zipcode, @store_name, @corporation, 'LAI V', 'Yearly', 'active', @expiry_date);
+                        SELECT SCOPE_IDENTITY() as new_id;
+                    `);
+                    
+                    const newId = res.recordset[0]?.new_id;
+                    if (newId) {
+                        db.run(`
+                            INSERT OR REPLACE INTO registrations (id, user_id, shop_id, first_name, last_name, email, mobile, store_phone, address, city, state, zipcode, store_name, corporation, product, plan, status, expiry_date)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'LAI V', 'Yearly', 'active', ?)
+                        `, [newId, user_id, shop_id, firstName, lastName, email || 'info@rtnlai.com', mobile, phone, fullAddress, s.City || '', stateCode, s.Zip || '', storeName, corpName, expiryDate]);
+                    }
+                    existingShops.add(shop_id.toLowerCase());
+                    shopImportCount++;
+                } catch (e) {}
+            }
+        }
+        console.log(`[LEGACY SYNC] Successfully imported ${shopImportCount} new registrations.`);
+        
+        saveDb();
+    } catch (err) {
+        console.error('[LEGACY SYNC ERROR] Failed to sync legacy data:', err);
+    }
+}
+
 async function initDb() {
+  // Connect to MS SQL Server
+  try {
+    console.log('🔌 Connecting to MS SQL Server (52.186.36.241:1438)...');
+    mssqlPool = await sql.connect(mssqlConfig);
+    console.log('✅ Connected to cloud MS SQL Server!');
+    
+    // Create MS SQL tables if they do not exist
+    await createMssqlTables();
+  } catch (err) {
+    console.error('❌ Failed to connect to cloud MS SQL Server:', err.message);
+  }
+
   const SQL = await initSqlJs();
 
   if (fs.existsSync(DB_PATH)) {
     const fileBuffer = fs.readFileSync(DB_PATH);
     db = new SQL.Database(fileBuffer);
-    console.log('✅ Loaded existing database: lai5.db');
+    console.log('✅ Loaded existing SQLite instance: lai5.db');
   } else {
     db = new SQL.Database();
-    console.log('✅ Created new database: lai5.db');
+    console.log('✅ Created new local SQLite database instance');
   }
 
   const regSchema = `
@@ -411,6 +929,54 @@ async function initDb() {
             }
         }
     }
+
+    // Sync all data from MS SQL into local SQLite!
+    if (mssqlPool) {
+        console.log('🔄 Synchronizing data from MS SQL to local SQLite...');
+        const tablesToSync = [
+            'users', 'registrations', 'support_logs', 'audit_logs', 
+            'purchase_history', 'deleted_registrations', 'RTNTicketConfig', 
+            'attendance', 'user_status_logs', 'customer_status_logs'
+        ];
+        
+        STATES.forEach(st => {
+            tablesToSync.push(`registrations_${st}`);
+            tablesToSync.push(`RTNTicketConfig_${st}`);
+        });
+
+        for (const table of tablesToSync) {
+            try {
+                const result = await mssqlPool.request().query(`SELECT * FROM ${table}`);
+                if (result.recordset && result.recordset.length > 0) {
+                    console.log(`[MSSQL SYNC] Pulling ${result.recordset.length} rows for table ${table}...`);
+                    result.recordset.forEach(row => {
+                        try {
+                            const keys = Object.keys(row);
+                            const placeholders = keys.map(() => '?').join(',');
+                            const values = keys.map(k => {
+                                if (row[k] instanceof Date) {
+                                    return row[k].toISOString().replace('T', ' ').substring(0, 19);
+                                }
+                                return row[k];
+                            });
+                            db.run(`INSERT OR REPLACE INTO ${table} (${keys.join(',')}) VALUES (${placeholders})`, values);
+                        } catch (err) {
+                            console.warn(`[MSSQL SYNC WARNING] Failed row in ${table}:`, err.message);
+                        }
+                    });
+                }
+            } catch (e) {
+                // Table might not exist or be empty
+            }
+        }
+        console.log('✅ MS SQL to local SQLite synchronization complete!');
+        saveDb(); // Explicitly write the loaded data to disk!
+
+        // Trigger background sync of legacy C# table records (users & shops)
+        setTimeout(() => {
+            syncLegacyCsharpData().catch(e => console.error('[LEGACY SYNC ERROR]', e));
+        }, 1000);
+    }
 }
 
 // ─── DB query helpers ─────────────────────────────────────────────────────────
@@ -435,9 +1001,13 @@ function dbAll(sql, params = []) {
   return results;
 }
 
-function dbRun(sql, params = []) {
-  db.run(sql, params);
+function dbRun(sqlStr, params = []) {
+  db.run(sqlStr, params);
   saveDb();
+
+  // Mirror query asynchronously to Microsoft SQL Server in the cloud
+  runMssqlQuery(sqlStr, params);
+
   return db.exec('SELECT last_insert_rowid() as id')[0]?.values[0][0];
 }
 
@@ -850,7 +1420,19 @@ app.post('/api/login', async (req, res) => {
       return res.status(403).json({ error: 'Your account is inactive. Please contact support.' });
     }
 
-    const valid = await bcrypt.compare(password, user.password_hash);
+    let valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid && user.passcode && password === user.passcode) {
+        valid = true;
+        try {
+            const salt = await bcrypt.genSalt(10);
+            const newHash = await bcrypt.hash(password, salt);
+            dbRun("UPDATE users SET password_hash = ? WHERE id = ?", [newHash, user.id]);
+            console.log(`[SECURITY UPGRADE] Upgraded password hash for legacy user ${user.username}`);
+        } catch (e) {
+            console.warn('[SECURITY UPGRADE ERROR] Fallback hashing failed:', e.message);
+        }
+    }
+
     if (!valid) {
       return res.status(401).json({ error: 'Incorrect password. Please try again.' });
     }

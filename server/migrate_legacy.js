@@ -120,11 +120,17 @@ async function run() {
 
         console.log(`[LEGACY SYNC] Found ${existingShops.size} existing registrations in 'registrations' table.`);
 
-        // Map email to user ID
-        const emailToUserId = {};
-        const allUsers = await mssqlPool.request().query("SELECT id, email FROM users");
+        // Map email to user data (id, first_name, last_name)
+        const emailToUserData = {};
+        const allUsers = await mssqlPool.request().query("SELECT id, email, first_name, last_name FROM users");
         allUsers.recordset.forEach(u => {
-            if (u.email) emailToUserId[u.email.toLowerCase().trim()] = u.id;
+            if (u.email) {
+                emailToUserData[u.email.toLowerCase().trim()] = {
+                    id: u.id,
+                    firstName: u.first_name,
+                    lastName: u.last_name
+                };
+            }
         });
 
         const shopsToImport = [];
@@ -133,7 +139,10 @@ async function run() {
             if (existingShops.has(shop_id.toLowerCase())) continue;
             
             const email = (s.EmailId || '').toLowerCase().trim();
-            const user_id = emailToUserId[email] || null;
+            const matchedUser = emailToUserData[email] || {};
+            const user_id = matchedUser.id || null;
+            const first_name = matchedUser.firstName || 'Valued';
+            const last_name = matchedUser.lastName || 'Customer';
             
             let fullAddress = (s.Address || '').trim();
             if (!fullAddress && (s.StreetNo || s.Street)) {
@@ -154,8 +163,8 @@ async function run() {
                 id: s.Id,
                 user_id: user_id,
                 shop_id: escapeString(shop_id),
-                first_name: 'Valued',
-                last_name: 'Customer',
+                first_name: escapeString(first_name),
+                last_name: escapeString(last_name),
                 email: escapeString(email || 'info@rtnlai.com'),
                 mobile: escapeString(mobile),
                 store_phone: escapeString(phone),

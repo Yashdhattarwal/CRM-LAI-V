@@ -1872,7 +1872,7 @@ app.get('/api/admin/registrations', adminOnly, (req, res) => {
 
   let sql = `
     SELECT r.id as id, r.id as reg_id, r.shop_id, u.id as user_id, u.username, u.email as user_email, 
-           r.passcode,
+           COALESCE(u.passcode, r.passcode) as passcode,
            r.first_name, r.last_name, r.email as reg_email, r.store_name, r.corporation as legal_name,
            r.product, r.plan, r.status, r.submitted_at, r.address, r.city, r.state, r.zipcode, 
            r.mobile as phone, r.payment_mode, r.bank_name, r.routing_no, r.account_no, 

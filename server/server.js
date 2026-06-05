@@ -37,7 +37,11 @@ app.set('trust proxy', 1); // Trust Localtunnel/Proxy headers
 app.use(express.static(FRONTEND));
 app.use('/admin', express.static(ADMIN_PORTAL));
 app.use('/attachments', express.static(UPLOADS));
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({ origin: true, credentials: true }));
 app.use(session({
@@ -286,6 +290,77 @@ async function createMssqlTables() {
                     PackNo_length INT NOT NULL,
                     PackPos_start INT NOT NULL,
                     PackPos_length INT NOT NULL
+                )`,
+
+               `IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[leads]') AND type in (N'U'))
+                CREATE TABLE leads (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    source NVARCHAR(255) NOT NULL,
+                    external_lead_id NVARCHAR(255) UNIQUE,
+                    campaign_name NVARCHAR(255),
+                    ad_set_name NVARCHAR(255),
+                    lead_name NVARCHAR(255) NOT NULL,
+                    email NVARCHAR(255),
+                    phone NVARCHAR(255),
+                    normalized_phone NVARCHAR(255),
+                    store_name NVARCHAR(255),
+                    city NVARCHAR(255),
+                    state NVARCHAR(255),
+                    pos_system NVARCHAR(255),
+                    status NVARCHAR(255) DEFAULT 'New',
+                    assigned_to INT REFERENCES users(id),
+                    notes NVARCHAR(MAX),
+                    created_at DATETIME DEFAULT GETDATE(),
+                    updated_at DATETIME DEFAULT GETDATE()
+                )`,
+
+               `IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[lead_activities]') AND type in (N'U'))
+                CREATE TABLE lead_activities (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    lead_id INT NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+                    activity_type NVARCHAR(255) NOT NULL,
+                    activity_notes NVARCHAR(MAX),
+                    created_by NVARCHAR(255) NOT NULL,
+                    created_at DATETIME DEFAULT GETDATE()
+                )`,
+
+               `IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[lead_sources]') AND type in (N'U'))
+                CREATE TABLE lead_sources (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    source_name NVARCHAR(255) UNIQUE NOT NULL,
+                    source_type NVARCHAR(255) NOT NULL,
+                    active INT DEFAULT 1
+                )`,
+                
+               `IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[lead_api_keys]') AND type in (N'U'))
+                CREATE TABLE lead_api_keys (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    key_name NVARCHAR(255) NOT NULL,
+                    api_key NVARCHAR(255) UNIQUE NOT NULL,
+                    api_secret NVARCHAR(255) NOT NULL,
+                    active INT DEFAULT 1,
+                    created_by NVARCHAR(255) NOT NULL,
+                    created_at DATETIME DEFAULT GETDATE(),
+                    last_used_at DATETIME
+                )`,
+                
+               `IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[crm_settings]') AND type in (N'U'))
+                CREATE TABLE crm_settings (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    setting_key NVARCHAR(255) UNIQUE NOT NULL,
+                    setting_value NVARCHAR(MAX),
+                    updated_at DATETIME DEFAULT GETDATE()
+                )`,
+
+               `IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[meta_sync_logs]') AND type in (N'U'))
+                CREATE TABLE meta_sync_logs (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    lead_id INT,
+                    facebook_lead_id NVARCHAR(255),
+                    status NVARCHAR(50) NOT NULL,
+                    error_message NVARCHAR(MAX),
+                    payload NVARCHAR(MAX),
+                    created_at DATETIME DEFAULT GETDATE()
                 )`
     ];
 
@@ -770,6 +845,137 @@ async function initDb() {
     );
   `);
 
+  // Leads table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS leads (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      source          TEXT NOT NULL,
+      external_lead_id TEXT UNIQUE,
+      campaign_name   TEXT,
+      ad_set_name     TEXT,
+      lead_name       TEXT NOT NULL,
+      email           TEXT,
+      phone           TEXT,
+      normalized_phone TEXT,
+      store_name      TEXT,
+      city            TEXT,
+      state           TEXT,
+      pos_system      TEXT,
+      status          TEXT DEFAULT 'New',
+      assigned_to     INTEGER REFERENCES users(id),
+      notes           TEXT,
+      created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Lead Activities table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS lead_activities (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      lead_id         INTEGER REFERENCES leads(id) ON DELETE CASCADE,
+      activity_type   TEXT NOT NULL,
+      activity_notes  TEXT,
+      created_by      TEXT NOT NULL,
+      created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Lead Sources table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS lead_sources (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_name     TEXT UNIQUE NOT NULL,
+      source_type     TEXT NOT NULL,
+      active          INTEGER DEFAULT 1
+    );
+  `);
+
+  // Seed default lead sources
+  try {
+    const sourceExists = dbGet("SELECT id FROM lead_sources LIMIT 1");
+    if (!sourceExists) {
+      dbRun("INSERT INTO lead_sources (source_name, source_type, active) VALUES (?, ?, ?)", ["Manual Entry", "manual", 1]);
+      dbRun("INSERT INTO lead_sources (source_name, source_type, active) VALUES (?, ?, ?)", ["Facebook Lead Ads", "facebook", 1]);
+      dbRun("INSERT INTO lead_sources (source_name, source_type, active) VALUES (?, ?, ?)", ["Instagram Lead Ads", "instagram", 1]);
+      dbRun("INSERT INTO lead_sources (source_name, source_type, active) VALUES (?, ?, ?)", ["Website Form", "website", 1]);
+    }
+  } catch (e) {
+    console.error('[LEAD SOURCES SEED ERROR]', e);
+  }
+
+  // Lead API Keys table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS lead_api_keys (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      key_name        TEXT NOT NULL,
+      api_key         TEXT UNIQUE NOT NULL,
+      api_secret      TEXT NOT NULL,
+      active          INTEGER DEFAULT 1,
+      created_by      TEXT NOT NULL,
+      created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_used_at    DATETIME
+    );
+  `);
+
+  // CRM Settings table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS crm_settings (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      setting_key     TEXT UNIQUE NOT NULL,
+      setting_value   TEXT,
+      updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Meta Sync Logs table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS meta_sync_logs (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      lead_id         INTEGER,
+      facebook_lead_id TEXT,
+      status          TEXT NOT NULL,
+      error_message   TEXT,
+      payload         TEXT,
+      created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Seed default settings
+  try {
+    const settingExists = dbGet("SELECT id FROM crm_settings LIMIT 1");
+    if (!settingExists) {
+      dbRun("INSERT INTO crm_settings (setting_key, setting_value) VALUES (?, ?)", ["lead_assignment_mode", "round_robin"]);
+      dbRun("INSERT INTO crm_settings (setting_key, setting_value) VALUES (?, ?)", ["lead_assignment_user", ""]);
+      dbRun("INSERT INTO crm_settings (setting_key, setting_value) VALUES (?, ?)", ["lead_assignment_round_robin_index", "0"]);
+      dbRun("INSERT INTO crm_settings (setting_key, setting_value) VALUES (?, ?)", ["lead_notification_emails", "admin@rtnlai.com"]);
+    }
+
+    // Ensure Meta configuration settings exist
+    const ensureSetting = (key, defaultVal) => {
+      const exists = dbGet("SELECT id FROM crm_settings WHERE setting_key = ?", [key]);
+      if (!exists) {
+        dbRun("INSERT INTO crm_settings (setting_key, setting_value) VALUES (?, ?)", [key, defaultVal]);
+      }
+    };
+    ensureSetting("meta_page_id", "");
+    ensureSetting("meta_form_id", "");
+    ensureSetting("meta_access_token", "");
+    ensureSetting("meta_connection_status", "Disconnected");
+    ensureSetting("meta_last_sync_timestamp", "");
+    ensureSetting("meta_verify_token", "lai_meta_verify_token_2026");
+    ensureSetting("meta_app_secret", "");
+    ensureSetting("meta_lead_mappings", JSON.stringify({
+      "full_name": "lead_name",
+      "phone_number": "phone",
+      "email": "email",
+      "store_name": "store_name",
+      "city": "city"
+    }));
+  } catch (e) {
+    console.error('[CRM SETTINGS SEED ERROR]', e);
+  }
+
   // Create 50 State-specific tables
   STATES.forEach(st => {
     db.run(`CREATE TABLE IF NOT EXISTS registrations_${st} (${regSchema});`);
@@ -936,7 +1142,8 @@ async function initDb() {
         const tablesToSync = [
             'users', 'registrations', 'support_logs', 'audit_logs', 
             'purchase_history', 'deleted_registrations', 'RTNTicketConfig', 
-            'attendance', 'user_status_logs', 'customer_status_logs'
+            'attendance', 'user_status_logs', 'customer_status_logs',
+            'leads', 'lead_activities', 'lead_sources', 'lead_api_keys', 'crm_settings'
         ];
         
         STATES.forEach(st => {
@@ -1003,12 +1210,13 @@ function dbAll(sql, params = []) {
 
 function dbRun(sqlStr, params = []) {
   db.run(sqlStr, params);
+  const rowId = db.exec('SELECT last_insert_rowid() as id')[0]?.values[0][0];
   saveDb();
 
   // Mirror query asynchronously to Microsoft SQL Server in the cloud
   runMssqlQuery(sqlStr, params);
 
-  return db.exec('SELECT last_insert_rowid() as id')[0]?.values[0][0];
+  return rowId;
 }
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
@@ -2534,6 +2742,1360 @@ app.delete("/api/admin/registrations/status-log/:logId", adminOnly, (req, res) =
     if (req.session.role !== 'admin') return res.status(403).json({ error: "Only admins can delete status logs" });
     dbRun("DELETE FROM customer_status_logs WHERE id = ?", [req.params.logId]);
     res.json({ success: true });
+});
+
+// ─── Lead Management REST APIs ──────────────────────────────────────────────────
+
+function leadsAuth(req, res, next) {
+  // Allow authenticated staff members (admin, manager, employee)
+  if (req.session && req.session.isAdmin && ['admin', 'manager', 'employee'].includes(req.session.role)) {
+    return next();
+  }
+  
+  // Allow future integration token authorization
+  const authHeader = req.headers['authorization'];
+  const apiKey = req.headers['x-api-key'];
+  const secretKey = 'lai_crm_lead_secret_2026'; // Default API secret key
+  
+  if ((authHeader && authHeader.includes(secretKey)) || apiKey === secretKey) {
+    return next();
+  }
+
+  res.status(403).json({ error: 'Unauthorized. Staff session or valid API token required.' });
+}
+
+function normalizePhone(phone) {
+  if (!phone) return '';
+  return String(phone).replace(/\D/g, '').slice(-10); // Standardize to last 10 digits
+}
+
+// GET /api/lead-sources - Expose active lead sources
+app.get('/api/lead-sources', leadsAuth, (req, res) => {
+  try {
+    const sources = dbAll("SELECT * FROM lead_sources WHERE active = 1 ORDER BY source_name ASC");
+    res.json({ success: true, data: sources });
+  } catch (err) {
+    console.error('[GET LEAD SOURCES ERROR]', err);
+    res.status(500).json({ error: "Failed to fetch lead sources" });
+  }
+});
+
+// GET /api/analytics/leads - Dashboard stats & charts
+app.get('/api/analytics/leads', leadsAuth, (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // SQLite Date calculations (note: SQLite dates are stored as ISO strings)
+    const totalLeads = (dbGet("SELECT COUNT(*) as c FROM leads") || {}).c || 0;
+    
+    // Leads today (comparing YYYY-MM-DD prefix)
+    const leadsToday = (dbGet("SELECT COUNT(*) as c FROM leads WHERE DATE(created_at) = DATE('now', 'localtime')") || {}).c || 0;
+    
+    // Leads this week (compare YYYY-Week number)
+    const leadsThisWeek = (dbGet("SELECT COUNT(*) as c FROM leads WHERE strftime('%Y-%W', created_at) = strftime('%Y-%W', 'now', 'localtime')") || {}).c || 0;
+    
+    // Leads this month (compare YYYY-MM)
+    const leadsThisMonth = (dbGet("SELECT COUNT(*) as c FROM leads WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now', 'localtime')") || {}).c || 0;
+    
+    const qualifiedLeads = (dbGet("SELECT COUNT(*) as c FROM leads WHERE status = 'Qualified'") || {}).c || 0;
+    const convertedLeads = (dbGet("SELECT COUNT(*) as c FROM leads WHERE status = 'Converted'") || {}).c || 0;
+    const conversionRate = totalLeads > 0 ? parseFloat(((convertedLeads / totalLeads) * 100).toFixed(2)) : 0;
+    
+    // Charts Groupings
+    const leadsBySource = dbAll(`
+      SELECT source, COUNT(*) as count 
+      FROM leads 
+      GROUP BY source 
+      ORDER BY count DESC
+    `);
+    
+    const leadsByCampaign = dbAll(`
+      SELECT COALESCE(NULLIF(campaign_name, ''), 'Direct/Unknown') as name, COUNT(*) as count 
+      FROM leads 
+      GROUP BY name 
+      ORDER BY count DESC 
+      LIMIT 10
+    `);
+    
+    const leadsByCity = dbAll(`
+      SELECT COALESCE(NULLIF(city, ''), 'Unknown') as name, COUNT(*) as count 
+      FROM leads 
+      GROUP BY name 
+      ORDER BY count DESC 
+      LIMIT 10
+    `);
+    
+    const leadsByStatus = dbAll(`
+      SELECT status as name, COUNT(*) as count 
+      FROM leads 
+      GROUP BY name 
+      ORDER BY count DESC
+    `);
+
+    res.json({
+      success: true,
+      widgets: {
+        totalLeads,
+        leadsToday,
+        leadsThisWeek,
+        leadsThisMonth,
+        qualifiedLeads,
+        convertedLeads,
+        conversionRate
+      },
+      charts: {
+        leadsBySource,
+        leadsByCampaign,
+        leadsByCity,
+        leadsByStatus
+      }
+    });
+  } catch (err) {
+    console.error('[GET LEAD ANALYTICS ERROR]', err);
+    res.status(500).json({ error: "Failed to generate lead analytics data" });
+  }
+});
+
+// GET /api/leads - Query/Filter Leads
+app.get('/api/leads', leadsAuth, (req, res) => {
+  let { search, source, status, assigned_to, state, sortBy, sortOrder, page, limit } = req.query;
+  
+  page = parseInt(page) || 1;
+  limit = parseInt(limit) || 15;
+  const offset = (page - 1) * limit;
+
+  let query = `
+    SELECT l.*, 
+           u.username as assigned_username, 
+           u.first_name as assigned_first_name, 
+           u.last_name as assigned_last_name 
+    FROM leads l 
+    LEFT JOIN users u ON l.assigned_to = u.id 
+    WHERE 1=1
+  `;
+  let countQuery = `SELECT COUNT(*) as count FROM leads l WHERE 1=1`;
+  const params = [];
+  const countParams = [];
+
+  if (search && search.trim()) {
+    const searchVal = `%${search.trim()}%`;
+    const searchSql = ` AND (l.lead_name LIKE ? OR l.email LIKE ? OR l.phone LIKE ? OR l.store_name LIKE ? OR l.city LIKE ?)`;
+    query += searchSql;
+    countQuery += searchSql;
+    params.push(searchVal, searchVal, searchVal, searchVal, searchVal);
+    countParams.push(searchVal, searchVal, searchVal, searchVal, searchVal);
+  }
+
+  if (source) {
+    query += ` AND l.source = ?`;
+    countQuery += ` AND l.source = ?`;
+    params.push(source);
+    countParams.push(source);
+  }
+
+  if (status) {
+    query += ` AND l.status = ?`;
+    countQuery += ` AND l.status = ?`;
+    params.push(status);
+    countParams.push(status);
+  }
+
+  if (assigned_to) {
+    if (assigned_to === 'unassigned') {
+      query += ` AND l.assigned_to IS NULL`;
+      countQuery += ` AND l.assigned_to IS NULL`;
+    } else {
+      query += ` AND l.assigned_to = ?`;
+      countQuery += ` AND l.assigned_to = ?`;
+      params.push(parseInt(assigned_to));
+      countParams.push(parseInt(assigned_to));
+    }
+  }
+
+  if (state) {
+    query += ` AND l.state = ?`;
+    countQuery += ` AND l.state = ?`;
+    params.push(state.toUpperCase());
+    countParams.push(state.toUpperCase());
+  }
+
+  // Sorting
+  const allowedSortFields = ['created_at', 'updated_at', 'lead_name', 'status', 'source', 'store_name', 'city'];
+  const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'created_at';
+  const sortDir = (sortOrder === 'asc' || sortOrder === 'ASC') ? 'ASC' : 'DESC';
+  
+  query += ` ORDER BY l.${sortField} ${sortDir}`;
+  
+  // Pagination
+  query += ` LIMIT ? OFFSET ?`;
+  params.push(limit, offset);
+
+  try {
+    const leads = dbAll(query, params);
+    const totalCount = dbGet(countQuery, countParams)?.count || 0;
+    
+    res.json({
+      success: true,
+      data: leads,
+      pagination: {
+        total: totalCount,
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount / limit)
+      }
+    });
+  } catch (err) {
+    console.error('[GET LEADS ERROR]', err);
+    res.status(500).json({ error: "Failed to retrieve leads" });
+  }
+});
+
+// GET /api/leads/:id - Single Lead Details with Activities
+app.get('/api/leads/:id', leadsAuth, (req, res) => {
+  const leadId = req.params.id;
+  try {
+    const lead = dbGet(`
+      SELECT l.*, 
+             u.username as assigned_username, 
+             u.first_name as assigned_first_name, 
+             u.last_name as assigned_last_name 
+      FROM leads l 
+      LEFT JOIN users u ON l.assigned_to = u.id 
+      WHERE l.id = ?
+    `, [leadId]);
+
+    if (!lead) return res.status(404).json({ error: "Lead not found" });
+
+    const activities = dbAll(`
+      SELECT * FROM lead_activities 
+      WHERE lead_id = ? 
+      ORDER BY created_at DESC
+    `, [leadId]);
+
+    res.json({
+      success: true,
+      lead,
+      activities
+    });
+  } catch (err) {
+    console.error('[GET LEAD BY ID ERROR]', err);
+    res.status(500).json({ error: "Failed to retrieve lead details" });
+  }
+});
+
+// POST /api/leads - Create Lead (handles API push & duplicate checking)
+app.post('/api/leads', leadsAuth, (req, res) => {
+  const {
+    source, external_lead_id, campaign_name, ad_set_name,
+    lead_name, email, phone, store_name, city, state, pos_system,
+    notes, status, assigned_to
+  } = req.body;
+
+  if (!source || !lead_name) {
+    return res.status(400).json({ error: "Missing required fields: 'source' and 'lead_name' are mandatory." });
+  }
+
+  try {
+    // ─── Duplicate Detection ───
+    let existingLead = null;
+    if (external_lead_id) {
+      existingLead = dbGet("SELECT * FROM leads WHERE external_lead_id = ?", [external_lead_id]);
+    }
+    
+    const normPhone = normalizePhone(phone);
+    if (!existingLead && normPhone) {
+      existingLead = dbGet("SELECT * FROM leads WHERE normalized_phone = ?", [normPhone]);
+    }
+
+    if (existingLead) {
+      // Log duplicate attempt as activity on the existing lead
+      dbRun(`
+        INSERT INTO lead_activities (lead_id, activity_type, activity_notes, created_by)
+        VALUES (?, 'duplicate_submission', ?, ?)
+      `, [
+        existingLead.id,
+        `Duplicate lead submission received from source: '${source}'. Campaign: '${campaign_name || 'N/A'}'. details merged.`,
+        req.session.username || 'System/API'
+      ]);
+
+      // Return 200 OK with duplicate indicator to prevent external retries (e.g. Meta Ads webhook retries)
+      return res.status(200).json({
+        success: true,
+        message: "Duplicate lead detected. Activity logged.",
+        duplicate: true,
+        leadId: existingLead.id,
+        lead: existingLead
+      });
+    }
+
+    // ─── Create New Lead ───
+    const initialStatus = status || 'New';
+    const creator = req.session.username || 'System/API';
+
+    const leadId = dbRun(`
+      INSERT INTO leads (source, external_lead_id, campaign_name, ad_set_name, lead_name, email, phone, normalized_phone, store_name, city, state, pos_system, status, assigned_to, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      source,
+      external_lead_id || null,
+      campaign_name || null,
+      ad_set_name || null,
+      lead_name,
+      email || null,
+      phone || null,
+      normPhone || null,
+      store_name || null,
+      city || null,
+      state || null,
+      pos_system || null,
+      initialStatus,
+      assigned_to ? parseInt(assigned_to) : null,
+      notes || null
+    ]);
+
+    // Insert initialization activity log
+    dbRun(`
+      INSERT INTO lead_activities (lead_id, activity_type, activity_notes, created_by)
+      VALUES (?, 'system_created', ?, ?)
+    `, [
+      leadId,
+      `Lead initialized from source: '${source}' via API. Initial status: '${initialStatus}'.`,
+      creator
+    ]);
+
+    const createdLead = dbGet("SELECT * FROM leads WHERE id = ?", [leadId]);
+    res.status(201).json({
+      success: true,
+      message: "Lead created successfully",
+      leadId,
+      lead: createdLead
+    });
+
+  } catch (err) {
+    console.error('[POST LEAD ERROR]', err);
+    res.status(500).json({ error: "Failed to create lead" });
+  }
+});
+
+// PUT /api/leads/:id - Update Lead (with activity tracking)
+app.put('/api/leads/:id', leadsAuth, (req, res) => {
+  const leadId = req.params.id;
+  const updates = req.body;
+  const username = req.session.username || 'System';
+
+  try {
+    const current = dbGet("SELECT * FROM leads WHERE id = ?", [leadId]);
+    if (!current) return res.status(404).json({ error: "Lead not found" });
+
+    const updatableFields = [
+      'source', 'campaign_name', 'ad_set_name', 'lead_name', 'email', 
+      'phone', 'store_name', 'city', 'state', 'pos_system', 
+      'status', 'assigned_to', 'notes'
+    ];
+
+    const changes = [];
+    const fieldsToUpdate = [];
+    const values = [];
+
+    for (const field of updatableFields) {
+      if (updates[field] !== undefined) {
+        const oldVal = current[field];
+        const newVal = updates[field];
+        
+        if (String(oldVal) !== String(newVal)) {
+          fieldsToUpdate.push(`${field} = ?`);
+          
+          if (field === 'assigned_to') {
+            values.push(newVal ? parseInt(newVal) : null);
+          } else {
+            values.push(newVal);
+          }
+          
+          changes.push({ field, oldVal, newVal });
+        }
+      }
+    }
+
+    // Also update normalized_phone if phone is updated
+    if (updates.phone !== undefined && String(current.phone) !== String(updates.phone)) {
+      fieldsToUpdate.push("normalized_phone = ?");
+      values.push(normalizePhone(updates.phone) || null);
+    }
+
+    if (changes.length === 0) {
+      return res.json({ success: true, message: "No changes detected", lead: current });
+    }
+
+    fieldsToUpdate.push("updated_at = CURRENT_TIMESTAMP");
+    const setClause = fieldsToUpdate.join(", ");
+    dbRun(`UPDATE leads SET ${setClause} WHERE id = ?`, [...values, leadId]);
+
+    // ─── Activity Logs for changes ───
+    const statusChange = changes.find(c => c.field === 'status');
+    if (statusChange) {
+      dbRun(`
+        INSERT INTO lead_activities (lead_id, activity_type, activity_notes, created_by)
+        VALUES (?, 'status_change', ?, ?)
+      `, [
+        leadId,
+        `Status changed from '${statusChange.oldVal || 'New'}' to '${statusChange.newVal}'.`,
+        username
+      ]);
+    }
+
+    const assignmentChange = changes.find(c => c.field === 'assigned_to');
+    if (assignmentChange) {
+      let notesText = '';
+      if (assignmentChange.newVal) {
+        const newUser = dbGet("SELECT username, first_name, last_name FROM users WHERE id = ?", [assignmentChange.newVal]);
+        const nameStr = newUser ? `${newUser.first_name || ''} ${newUser.last_name || ''}`.trim() || newUser.username : `User ID ${assignmentChange.newVal}`;
+        notesText = `Lead assigned to ${nameStr}.`;
+      } else {
+        notesText = `Lead unassigned.`;
+      }
+      dbRun(`
+        INSERT INTO lead_activities (lead_id, activity_type, activity_notes, created_by)
+        VALUES (?, 'assigned', ?, ?)
+      `, [leadId, notesText, username]);
+    }
+
+    // Generic note change logging
+    const notesChange = changes.find(c => c.field === 'notes');
+    if (notesChange && !statusChange && !assignmentChange) {
+      dbRun(`
+        INSERT INTO lead_activities (lead_id, activity_type, activity_notes, created_by)
+        VALUES (?, 'note', ?, ?)
+      `, [leadId, `Notes updated.`, username]);
+    }
+
+    const updatedLead = dbGet("SELECT * FROM leads WHERE id = ?", [leadId]);
+    res.json({
+      success: true,
+      message: "Lead updated successfully",
+      lead: updatedLead,
+      changes
+    });
+
+  } catch (err) {
+    console.error('[PUT LEAD ERROR]', err);
+    res.status(500).json({ error: "Failed to update lead details" });
+  }
+});
+
+// POST /api/leads/:id/activity - Log Custom Activity (calls, notes, demos, conversions)
+app.post('/api/leads/:id/activity', leadsAuth, (req, res) => {
+  const leadId = req.params.id;
+  const { activity_type, activity_notes } = req.body;
+  const username = req.session.username || 'System';
+
+  if (!activity_type) {
+    return res.status(400).json({ error: "Missing required field: 'activity_type'" });
+  }
+
+  try {
+    const lead = dbGet("SELECT id, status FROM leads WHERE id = ?", [leadId]);
+    if (!lead) return res.status(404).json({ error: "Lead not found" });
+
+    // Auto status updates based on key workflow events
+    let autoStatus = null;
+    if (activity_type === 'demo_scheduled') autoStatus = 'Demo Scheduled';
+    else if (activity_type === 'converted') autoStatus = 'Converted';
+    else if (activity_type === 'lost') autoStatus = 'Lost';
+
+    if (autoStatus && lead.status !== autoStatus) {
+      dbRun("UPDATE leads SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [autoStatus, leadId]);
+      dbRun(`
+        INSERT INTO lead_activities (lead_id, activity_type, activity_notes, created_by)
+        VALUES (?, 'status_change', ?, ?)
+      `, [
+        leadId,
+        `Status auto-updated from '${lead.status}' to '${autoStatus}' via logged event '${activity_type.replace('_', ' ')}'.`,
+        username
+      ]);
+    }
+
+    // Log the custom activity
+    dbRun(`
+      INSERT INTO lead_activities (lead_id, activity_type, activity_notes, created_by)
+      VALUES (?, ?, ?, ?)
+    `, [
+      leadId,
+      activity_type,
+      activity_notes || '',
+      username
+    ]);
+
+    res.json({
+      success: true,
+      message: "Activity logged successfully",
+      statusUpdated: autoStatus || false
+    });
+
+  } catch (err) {
+    console.error('[POST ACTIVITY ERROR]', err);
+    res.status(500).json({ error: "Failed to log activity details" });
+  }
+});
+
+// POST /api/leads/bulk-status - Bulk status update for list actions
+app.post('/api/leads/bulk-status', leadsAuth, (req, res) => {
+  const { ids, status } = req.body;
+  const username = req.session.username || 'System';
+
+  if (!ids || !Array.isArray(ids) || ids.length === 0 || !status) {
+    return res.status(400).json({ error: "Invalid parameters. 'ids' (array) and 'status' (string) are required." });
+  }
+
+  const validStatuses = ['New', 'Contacted', 'Qualified', 'Demo Scheduled', 'Converted', 'Lost'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: `Invalid status value. Must be one of: ${validStatuses.join(', ')}` });
+  }
+
+  try {
+    const placeholders = ids.map(() => '?').join(',');
+    const oldLeads = dbAll(`SELECT id, status FROM leads WHERE id IN (${placeholders})`, ids);
+    
+    dbRun(`UPDATE leads SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders})`, [status, ...ids]);
+
+    for (const item of oldLeads) {
+      if (item.status !== status) {
+        dbRun(`
+          INSERT INTO lead_activities (lead_id, activity_type, activity_notes, created_by)
+          VALUES (?, 'status_change', ?, ?)
+        `, [
+          item.id,
+          `Status changed from '${item.status || 'New'}' to '${status}' via bulk update.`,
+          username
+        ]);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Successfully updated status of ${ids.length} leads to '${status}'`
+    });
+
+  } catch (err) {
+    console.error('[BULK STATUS UPDATE ERROR]', err);
+    res.status(500).json({ error: "Failed to perform bulk status update" });
+  }
+});
+
+// DELETE /api/leads/:id - Delete Lead (Admin/Manager only)
+app.delete('/api/leads/:id', leadsAuth, (req, res) => {
+  const leadId = req.params.id;
+  const role = req.session.role;
+
+  if (role !== 'admin' && role !== 'manager') {
+    return res.status(403).json({ error: "Access denied. Only Admins and Sales Managers can delete leads." });
+  }
+
+  try {
+    const lead = dbGet("SELECT id FROM leads WHERE id = ?", [leadId]);
+    if (!lead) return res.status(404).json({ error: "Lead not found" });
+
+    dbRun("DELETE FROM leads WHERE id = ?", [leadId]);
+    res.json({ success: true, message: "Lead permanently deleted." });
+
+  } catch (err) {
+    console.error('[DELETE LEAD ERROR]', err);
+    res.status(500).json({ error: "Failed to delete lead" });
+  }
+});
+
+// ─── API Gateway Ingestion Middleware ───
+async function apiGatewayAuth(req, res, next) {
+  const apiKey = req.headers['x-api-key'] || req.query.api_key;
+  const apiSecret = req.headers['x-api-secret'] || req.query.api_secret;
+
+  if (!apiKey || !apiSecret) {
+    return res.status(401).json({ error: "Unauthorized. Missing 'X-API-Key' or 'X-API-Secret' credentials." });
+  }
+
+  try {
+    const keyRecord = dbGet("SELECT * FROM lead_api_keys WHERE api_key = ? AND active = 1", [apiKey]);
+    if (!keyRecord) {
+      return res.status(401).json({ error: "Unauthorized. Invalid or inactive API key." });
+    }
+
+    if (keyRecord.api_secret !== apiSecret) {
+      return res.status(401).json({ error: "Unauthorized. Invalid API secret credentials." });
+    }
+
+    // Record last used timestamp
+    dbRun("UPDATE lead_api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?", [keyRecord.id]);
+    
+    req.apiKeyRecord = keyRecord;
+    next();
+  } catch (err) {
+    console.error('[API AUTH ERROR]', err);
+    res.status(500).json({ error: "Authentication system failure." });
+  }
+}
+
+// POST /api/leads/ingest - Unified Ingestion Endpoint for external tools (Zapier, Make, custom scripts, Facebook/Instagram webhooks)
+app.post('/api/leads/ingest', apiGatewayAuth, async (req, res) => {
+  const {
+    source, external_lead_id, campaign_name, ad_set_name,
+    lead_name, email, phone, store_name, city, state, pos_system,
+    notes, status
+  } = req.body;
+
+  if (!source || !lead_name) {
+    return res.status(400).json({ error: "Missing required fields: 'source' and 'lead_name' are mandatory." });
+  }
+
+  try {
+    // 1. Verify lead source is registered and active
+    const sourceRecord = dbGet("SELECT * FROM lead_sources WHERE source_name = ? AND active = 1", [source]);
+    if (!sourceRecord) {
+      return res.status(400).json({ error: `Lead source '${source}' is either not registered or inactive in CRM settings.` });
+    }
+
+    // 2. Duplicate Detection
+    let existingLead = null;
+    if (external_lead_id) {
+      existingLead = dbGet("SELECT * FROM leads WHERE external_lead_id = ?", [external_lead_id]);
+    }
+    
+    const normPhone = normalizePhone(phone);
+    if (!existingLead && normPhone) {
+      existingLead = dbGet("SELECT * FROM leads WHERE normalized_phone = ?", [normPhone]);
+    }
+    if (!existingLead && email) {
+      existingLead = dbGet("SELECT * FROM leads WHERE email = ?", [email.trim().toLowerCase()]);
+    }
+
+    if (existingLead) {
+      // Log duplicate attempt as activity
+      dbRun(`
+        INSERT INTO lead_activities (lead_id, activity_type, activity_notes, created_by)
+        VALUES (?, 'duplicate_submission', ?, ?)
+      `, [
+        existingLead.id,
+        `Duplicate lead ingestion attempt. Source: '${source}'. Campaign: '${campaign_name || 'N/A'}'. Details merged into notes.`,
+        `API Key: ${req.apiKeyRecord.key_name}`
+      ]);
+
+      // Merge notes if new notes provided
+      if (notes) {
+        const mergedNotes = `${existingLead.notes || ''}\n[Merged Note from duplicate submission]: ${notes}`.trim();
+        dbRun("UPDATE leads SET notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [mergedNotes, existingLead.id]);
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Duplicate lead detected. Submission merged.",
+        duplicate: true,
+        leadId: existingLead.id
+      });
+    }
+
+    // 3. Auto-Assignment Rules
+    let assignedTo = null;
+    const assignmentModeRecord = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'lead_assignment_mode'");
+    const assignmentMode = assignmentModeRecord ? assignmentModeRecord.setting_value : 'round_robin';
+
+    if (assignmentMode === 'single_user') {
+      const targetUserRecord = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'lead_assignment_user'");
+      if (targetUserRecord && targetUserRecord.setting_value) {
+        assignedTo = parseInt(targetUserRecord.setting_value) || null;
+      }
+    } else if (assignmentMode === 'round_robin') {
+      // Get active sales agents
+      const salesAgents = dbAll("SELECT id, email, username, first_name, last_name FROM users WHERE role IN ('admin', 'manager', 'employee') AND is_active = 1 ORDER BY id ASC");
+      if (salesAgents.length > 0) {
+        const indexRecord = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'lead_assignment_round_robin_index'");
+        let index = indexRecord ? parseInt(indexRecord.setting_value) || 0 : 0;
+        index = index % salesAgents.length;
+
+        const selectedAgent = salesAgents[index];
+        assignedTo = selectedAgent.id;
+
+        // Save incremented index
+        const nextIndex = (index + 1) % salesAgents.length;
+        dbRun("UPDATE crm_settings SET setting_value = ?, updated_at = CURRENT_TIMESTAMP WHERE setting_key = 'lead_assignment_round_robin_index'", [nextIndex.toString()]);
+      }
+    }
+
+    // 4. Save New Lead
+    const initialStatus = status || 'New';
+    const leadId = dbRun(`
+      INSERT INTO leads (source, external_lead_id, campaign_name, ad_set_name, lead_name, email, phone, normalized_phone, store_name, city, state, pos_system, status, assigned_to, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      source,
+      external_lead_id || null,
+      campaign_name || null,
+      ad_set_name || null,
+      lead_name,
+      email || null,
+      phone || null,
+      normPhone || null,
+      store_name || null,
+      city || null,
+      state || null,
+      pos_system || null,
+      initialStatus,
+      assignedTo,
+      notes || null
+    ]);
+
+    // Insert initialization log
+    dbRun(`
+      INSERT INTO lead_activities (lead_id, activity_type, activity_notes, created_by)
+      VALUES (?, 'system_created', ?, ?)
+    `, [
+      leadId,
+      `Lead automatically ingested via integration framework. Source: '${source}'. API Key: '${req.apiKeyRecord.key_name}'.`,
+      'System/API'
+    ]);
+
+    // Log assignment activity
+    let assignedUserRecord = null;
+    if (assignedTo) {
+      assignedUserRecord = dbGet("SELECT email, username, first_name, last_name FROM users WHERE id = ?", [assignedTo]);
+      const nameStr = assignedUserRecord ? `${assignedUserRecord.first_name || ''} ${assignedUserRecord.last_name || ''}`.trim() || assignedUserRecord.username : `User #${assignedTo}`;
+      dbRun(`
+        INSERT INTO lead_activities (lead_id, activity_type, activity_notes, created_by)
+        VALUES (?, 'assigned', ?, ?)
+      `, [
+        leadId,
+        `Lead automatically assigned to ${nameStr} (assignment mode: ${assignmentMode}).`,
+        'System/API'
+      ]);
+    }
+
+    // 5. Trigger Notifications
+    const leadDetails = dbGet("SELECT * FROM leads WHERE id = ?", [leadId]);
+    if (leadDetails) {
+      leadDetails.assigned_name = assignedUserRecord 
+        ? `${assignedUserRecord.first_name || ''} ${assignedUserRecord.last_name || ''}`.trim() || assignedUserRecord.username 
+        : 'Unassigned';
+
+      // Read manager notification emails
+      const notifyRecord = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'lead_notification_emails'");
+      const managerEmails = notifyRecord && notifyRecord.setting_value 
+        ? notifyRecord.setting_value.split(',').map(e => e.trim()).filter(e => e)
+        : [];
+
+      const assigneeEmail = assignedUserRecord ? assignedUserRecord.email : null;
+
+      // Send mailer alert
+      mailer.sendLeadNotificationEmail(leadDetails, assigneeEmail, managerEmails).catch(e => {
+        console.error('[INGEST NOTIFICATION ERROR]', e);
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Lead ingested successfully.",
+      leadId
+    });
+
+  } catch (err) {
+    console.error('[INGEST ERROR]', err);
+    res.status(500).json({ error: "Ingestion failed due to internal error." });
+  }
+});
+
+// GET /api/admin/lead-api-keys - List API Keys
+app.get('/api/admin/lead-api-keys', leadsAuth, (req, res) => {
+  try {
+    const keys = dbAll("SELECT id, key_name, api_key, active, created_by, created_at, last_used_at FROM lead_api_keys ORDER BY created_at DESC");
+    res.json({ success: true, keys });
+  } catch (e) {
+    console.error('[GET KEYS ERROR]', e);
+    res.status(500).json({ error: "Failed to fetch API keys" });
+  }
+});
+
+// POST /api/admin/lead-api-keys - Create a new API Key/Secret pair
+app.post('/api/admin/lead-api-keys', leadsAuth, (req, res) => {
+  const { key_name } = req.body;
+  if (!key_name) {
+    return res.status(400).json({ error: "Key name is required." });
+  }
+
+  const username = req.session.username || 'Admin';
+
+  try {
+    const apiKey = 'lai_key_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const apiSecret = 'lai_sec_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+    dbRun(`
+      INSERT INTO lead_api_keys (key_name, api_key, api_secret, active, created_by)
+      VALUES (?, ?, ?, 1, ?)
+    `, [key_name, apiKey, apiSecret, username]);
+
+    res.status(201).json({
+      success: true,
+      message: "API Key pair generated successfully. Copy the secret now, it cannot be recovered.",
+      key: {
+        key_name,
+        api_key: apiKey,
+        api_secret: apiSecret
+      }
+    });
+  } catch (e) {
+    console.error('[CREATE KEY ERROR]', e);
+    res.status(500).json({ error: "Failed to generate API key" });
+  }
+});
+
+// POST /api/admin/lead-api-keys/:id/toggle - Toggle API key active state
+app.post('/api/admin/lead-api-keys/:id/toggle', leadsAuth, (req, res) => {
+  const keyId = req.params.id;
+  try {
+    const key = dbGet("SELECT active FROM lead_api_keys WHERE id = ?", [keyId]);
+    if (!key) return res.status(404).json({ error: "API Key not found" });
+
+    const newActive = key.active === 1 ? 0 : 1;
+    dbRun("UPDATE lead_api_keys SET active = ? WHERE id = ?", [newActive, keyId]);
+    res.json({ success: true, active: newActive });
+  } catch (e) {
+    console.error('[TOGGLE KEY ERROR]', e);
+    res.status(500).json({ error: "Failed to toggle key status" });
+  }
+});
+
+// DELETE /api/admin/lead-api-keys/:id - Permanent delete API Key
+app.delete('/api/admin/lead-api-keys/:id', leadsAuth, (req, res) => {
+  const keyId = req.params.id;
+  const role = req.session.role;
+  if (role !== 'admin') {
+    return res.status(403).json({ error: "Access denied. Only Admins can delete credentials." });
+  }
+  try {
+    dbRun("DELETE FROM lead_api_keys WHERE id = ?", [keyId]);
+    res.json({ success: true, message: "API key deleted permanently." });
+  } catch (e) {
+    console.error('[DELETE KEY ERROR]', e);
+    res.status(500).json({ error: "Failed to delete API key" });
+  }
+});
+
+// GET /api/admin/crm-settings - Get settings
+app.get('/api/admin/crm-settings', leadsAuth, (req, res) => {
+  try {
+    const settingsList = dbAll("SELECT setting_key, setting_value FROM crm_settings");
+    const settingsObj = {};
+    settingsList.forEach(s => {
+      settingsObj[s.setting_key] = s.setting_value;
+    });
+    res.json({ success: true, settings: settingsObj });
+  } catch (e) {
+    console.error('[GET SETTINGS ERROR]', e);
+    res.status(500).json({ error: "Failed to fetch CRM settings" });
+  }
+});
+
+// POST /api/admin/crm-settings - Update settings keys
+app.post('/api/admin/crm-settings', leadsAuth, (req, res) => {
+  const updates = req.body;
+  try {
+    Object.keys(updates).forEach(key => {
+      dbRun(`
+        INSERT OR REPLACE INTO crm_settings (setting_key, setting_value, updated_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+      `, [key, updates[key]]);
+    });
+    res.json({ success: true, message: "CRM Settings updated successfully." });
+  } catch (e) {
+    console.error('[POST SETTINGS ERROR]', e);
+    res.status(500).json({ error: "Failed to update CRM settings" });
+  }
+});
+
+// GET /api/admin/lead-sources - Get ALL lead sources (including inactive ones)
+app.get('/api/admin/lead-sources', leadsAuth, (req, res) => {
+  try {
+    const sources = dbAll("SELECT * FROM lead_sources ORDER BY source_name ASC");
+    res.json({ success: true, sources });
+  } catch (e) {
+    console.error('[GET SOURCES ERROR]', e);
+    res.status(500).json({ error: "Failed to fetch all lead sources" });
+  }
+});
+
+// POST /api/admin/lead-sources - Add new lead source
+app.post('/api/admin/lead-sources', leadsAuth, (req, res) => {
+  const { source_name, source_type } = req.body;
+  if (!source_name || !source_type) {
+    return res.status(400).json({ error: "Missing required fields: 'source_name' and 'source_type'." });
+  }
+  try {
+    dbRun("INSERT INTO lead_sources (source_name, source_type, active) VALUES (?, ?, 1)", [source_name, source_type]);
+    res.status(201).json({ success: true, message: "Lead source created successfully." });
+  } catch (e) {
+    console.error('[CREATE SOURCE ERROR]', e);
+    res.status(500).json({ error: "Failed to create lead source" });
+  }
+});
+
+// POST /api/admin/lead-sources/:id/toggle - Toggle source active status
+app.post('/api/admin/lead-sources/:id/toggle', leadsAuth, (req, res) => {
+  const srcId = req.params.id;
+  try {
+    const src = dbGet("SELECT active FROM lead_sources WHERE id = ?", [srcId]);
+    if (!src) return res.status(404).json({ error: "Lead source not found" });
+
+    const newActive = src.active === 1 ? 0 : 1;
+    dbRun("UPDATE lead_sources SET active = ? WHERE id = ?", [newActive, srcId]);
+    res.json({ success: true, active: newActive });
+  } catch (e) {
+    console.error('[TOGGLE SOURCE ERROR]', e);
+    res.status(500).json({ error: "Failed to toggle lead source state" });
+  }
+});
+
+// DELETE /api/admin/lead-sources/:id - Delete lead source
+app.delete('/api/admin/lead-sources/:id', leadsAuth, (req, res) => {
+  const srcId = req.params.id;
+  const role = req.session.role;
+  if (role !== 'admin') {
+    return res.status(403).json({ error: "Access denied. Only Admins can delete lead sources." });
+  }
+  try {
+    dbRun("DELETE FROM lead_sources WHERE id = ?", [srcId]);
+    res.json({ success: true, message: "Lead source deleted successfully." });
+  } catch (e) {
+    console.error('[DELETE SOURCE ERROR]', e);
+    res.status(500).json({ error: "Failed to delete lead source" });
+  }
+});
+
+// ─── Meta (Facebook/Instagram) Lead Ads Integration Endpoints ────────────────
+
+// GET /api/integrations/meta/webhook - Meta Webhook Verification
+app.get('/api/integrations/meta/webhook', (req, res) => {
+  try {
+    const verifyTokenSetting = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'meta_verify_token'");
+    const expectedVerifyToken = verifyTokenSetting ? verifyTokenSetting.setting_value : "lai_meta_verify_token_2026";
+    
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+    
+    if (mode && token) {
+      if (mode === 'subscribe' && token === expectedVerifyToken) {
+        console.log('[META WEBHOOK] Verification successful.');
+        return res.status(200).send(challenge);
+      } else {
+        console.warn('[META WEBHOOK] Verification failed. Tokens do not match.');
+        return res.sendStatus(403);
+      }
+    }
+    return res.sendStatus(400);
+  } catch (e) {
+    console.error('[META VERIFY ERROR]', e);
+    res.sendStatus(500);
+  }
+});
+
+// POST /api/integrations/meta/webhook - Ingest incoming Meta Leadgen Event
+app.post('/api/integrations/meta/webhook', async (req, res) => {
+  const payloadStr = JSON.stringify(req.body);
+  console.log('[META WEBHOOK] Received payload:', payloadStr);
+
+  try {
+    const crypto = require('crypto');
+    
+    // Signature Verification (HMAC-SHA256)
+    const appSecretSetting = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'meta_app_secret'");
+    const appSecret = appSecretSetting ? appSecretSetting.setting_value : "";
+    const isSimulated = req.headers['x-meta-simulation'] === 'true';
+    if (appSecret && !isSimulated) {
+      const signature = req.headers['x-hub-signature-256'];
+      if (!signature) {
+        console.warn('[META WEBHOOK] Missing x-hub-signature-256 header.');
+        dbRun("INSERT INTO meta_sync_logs (status, error_message, payload) VALUES (?, ?, ?)", 
+          ['failed', 'Missing signature header (x-hub-signature-256)', payloadStr]);
+        return res.status(401).json({ error: "Missing signature verification header." });
+      }
+      
+      const parts = signature.split('=');
+      if (parts.length !== 2) {
+        dbRun("INSERT INTO meta_sync_logs (status, error_message, payload) VALUES (?, ?, ?)", 
+          ['failed', 'Invalid signature header format', payloadStr]);
+        return res.status(401).json({ error: "Invalid signature format." });
+      }
+      
+      const expectedSignature = crypto
+        .createHmac('sha256', appSecret)
+        .update(req.rawBody || payloadStr)
+        .digest('hex');
+        
+      const bufferA = crypto.createHash('sha256').update(parts[1] || '').digest();
+      const bufferB = crypto.createHash('sha256').update(expectedSignature || '').digest();
+      const isMatch = crypto.timingSafeEqual(bufferA, bufferB);
+      if (!isMatch) {
+        console.warn('[META WEBHOOK] Signature verification mismatch.');
+        dbRun("INSERT INTO meta_sync_logs (status, error_message, payload) VALUES (?, ?, ?)", 
+          ['failed', 'Signature signature-256 mismatch', payloadStr]);
+        return res.status(401).json({ error: "Signature verification failed." });
+      }
+    }
+
+    const { object, entry } = req.body;
+    if (object !== 'page' || !entry || !Array.isArray(entry)) {
+      return res.status(200).json({ success: true, message: "Non-page object ignored." });
+    }
+
+    for (const ent of entry) {
+      const changes = ent.changes;
+      if (!changes || !Array.isArray(changes)) continue;
+
+      for (const change of changes) {
+        if (change.field !== 'leadgen') continue;
+
+        const val = change.value;
+        if (!val || !val.leadgen_id) continue;
+
+        const leadgenId = val.leadgen_id;
+        const formId = val.form_id;
+        const pageId = val.page_id;
+
+        // Duplicate Check (via external_lead_id)
+        const processedLead = dbGet("SELECT id FROM leads WHERE external_lead_id = ?", [leadgenId]);
+        if (processedLead) {
+          console.log(`[META WEBHOOK] Lead ${leadgenId} has already been processed.`);
+          dbRun("INSERT INTO meta_sync_logs (lead_id, facebook_lead_id, status, error_message, payload) VALUES (?, ?, ?, ?, ?)",
+            [processedLead.id, leadgenId, 'duplicate', 'Lead already exists. Submission ignored.', payloadStr]);
+          continue;
+        }
+
+        // Fetch lead details using Meta Graph API if access token is available
+        const tokenSetting = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'meta_access_token'");
+        const accessToken = tokenSetting ? tokenSetting.setting_value : "";
+
+        let leadData = null;
+        let fetchError = null;
+
+        if (accessToken) {
+          try {
+            console.log(`[META WEBHOOK] Requesting details for leadgen_id: ${leadgenId}`);
+            const graphRes = await fetch(`https://graph.facebook.com/v20.0/${leadgenId}?access_token=${accessToken}`);
+            if (graphRes.ok) {
+              leadData = await graphRes.json();
+            } else {
+              const errJson = await graphRes.json().catch(() => ({}));
+              fetchError = errJson.error?.message || `HTTP ${graphRes.status}`;
+            }
+          } catch (fetchErr) {
+            fetchError = fetchErr.message;
+          }
+        } else {
+          fetchError = "No Meta Access Token configured in CRM settings.";
+        }
+
+        let leadName = 'Meta Lead';
+        let email = '';
+        let phone = '';
+        let storeName = '';
+        let city = '';
+        let campaignName = val.campaign_name || 'Meta Ad Campaign';
+        let adSetName = val.adgroup_name || 'Meta Ad Set';
+        let platformSource = 'Facebook Lead Ads';
+
+        if (val.platform === 'ig' || (val.ad_id && val.platform === 'instagram')) {
+          platformSource = 'Instagram Lead Ads';
+        }
+
+        // Apply Custom Mappings if lead values are retrieved from Graph API
+        if (leadData && leadData.field_data) {
+          const mappingsSetting = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'meta_lead_mappings'");
+          const mappings = JSON.parse(mappingsSetting ? mappingsSetting.setting_value : "{}");
+
+          leadData.field_data.forEach(field => {
+            const name = field.name;
+            const value = field.values ? field.values[0] : "";
+            const targetCrmField = mappings[name];
+
+            if (targetCrmField === 'lead_name') leadName = value;
+            else if (targetCrmField === 'email') email = value;
+            else if (targetCrmField === 'phone') phone = value;
+            else if (targetCrmField === 'store_name') storeName = value;
+            else if (targetCrmField === 'city') city = value;
+            else {
+              // Direct matching fallback
+              if (name === 'full_name' || name === 'name') leadName = value;
+              else if (name === 'email') email = value;
+              else if (name === 'phone' || name === 'phone_number') phone = value;
+              else if (name === 'store_name') storeName = value;
+              else if (name === 'city') city = value;
+            }
+          });
+
+          if (leadData.campaign_name) campaignName = leadData.campaign_name;
+          if (leadData.adset_name) adSetName = leadData.adset_name;
+          if (leadData.platform === 'instagram') platformSource = 'Instagram Lead Ads';
+        }
+
+        // Support Simulation Tests
+        if (fetchError && req.headers['x-meta-simulation'] === 'true') {
+          console.log('[META WEBHOOK] Local test simulation mode.');
+          leadName = req.body.simulated_lead_name || 'Simulated Jane Doe';
+          email = req.body.simulated_email || 'simulated.jane@example.com';
+          phone = req.body.simulated_phone || '202-555-0199';
+          storeName = req.body.simulated_store_name || 'Simulated Store';
+          city = req.body.simulated_city || 'Atlanta';
+          campaignName = req.body.simulated_campaign_name || 'Simulated Campaign';
+          adSetName = req.body.simulated_adset_name || 'Simulated Ad Set';
+          platformSource = req.body.simulated_platform || 'Facebook Lead Ads';
+          fetchError = null; // Clear error to allow insertion
+        }
+
+        if (fetchError) {
+          console.warn('[META WEBHOOK] Lead ingest skipped due to fetch error:', fetchError);
+          dbRun("INSERT INTO meta_sync_logs (facebook_lead_id, status, error_message, payload) VALUES (?, ?, ?, ?)",
+            [leadgenId, 'failed', fetchError, payloadStr]);
+          continue;
+        }
+
+        const normPhone = normalizePhone(phone);
+
+        // Core Duplicate matching: normalized phone number or email match
+        let existingLead = null;
+        if (normPhone) {
+          existingLead = dbGet("SELECT * FROM leads WHERE normalized_phone = ?", [normPhone]);
+        }
+        if (!existingLead && email) {
+          existingLead = dbGet("SELECT * FROM leads WHERE email = ?", [email.trim().toLowerCase()]);
+        }
+
+        let savedLeadId = null;
+
+        if (existingLead) {
+          savedLeadId = existingLead.id;
+          
+          dbRun(`
+            UPDATE leads 
+            SET notes = ?, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+          `, [
+            `${existingLead.notes || ''}\n[Meta Lead Update] Ingested again from ${platformSource} under Campaign '${campaignName}'.`,
+            savedLeadId
+          ]);
+
+          dbRun(`
+            INSERT INTO lead_activities (lead_id, activity_type, activity_notes, created_by)
+            VALUES (?, 'duplicate_merged', ?, 'System')
+          `, [
+            savedLeadId,
+            `Duplicate lead detected from ${platformSource} (${email || phone}). Lead merged and updated. Campaign: '${campaignName}'.`
+          ]);
+
+          dbRun("INSERT INTO meta_sync_logs (lead_id, facebook_lead_id, status, payload) VALUES (?, ?, ?, ?)",
+            [savedLeadId, leadgenId, 'success', payloadStr]);
+          
+          console.log(`[META WEBHOOK] Lead duplicate matched and merged into Lead ID ${savedLeadId}.`);
+        } else {
+          // Assignment mode checks
+          const assignmentModeSetting = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'lead_assignment_mode'") || { setting_value: 'round_robin' };
+          const modeVal = assignmentModeSetting.setting_value;
+
+          let assignedTo = null;
+          const activeUsers = dbAll("SELECT id, username, email FROM users WHERE role IN ('admin', 'manager', 'employee') AND is_active = 1 ORDER BY id ASC");
+
+          if (modeVal === 'single' && activeUsers.length > 0) {
+            const singleUserSetting = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'lead_assignment_user'");
+            const singleUserId = parseInt(singleUserSetting?.setting_value);
+            const userExists = activeUsers.find(u => u.id === singleUserId);
+            if (userExists) {
+              assignedTo = singleUserId;
+            } else {
+              assignedTo = activeUsers[0].id;
+            }
+          } else if (modeVal === 'round_robin' && activeUsers.length > 0) {
+            const rrIndexSetting = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'lead_assignment_round_robin_index'") || { setting_value: '0' };
+            let rrIdx = parseInt(rrIndexSetting.setting_value) || 0;
+            if (rrIdx >= activeUsers.length) rrIdx = 0;
+
+            assignedTo = activeUsers[rrIdx].id;
+
+            const nextIdx = (rrIdx + 1) % activeUsers.length;
+            dbRun("UPDATE crm_settings SET setting_value = ?, updated_at = CURRENT_TIMESTAMP WHERE setting_key = 'lead_assignment_round_robin_index'", [String(nextIdx)]);
+          }
+
+          savedLeadId = dbRun(`
+            INSERT INTO leads (source, external_lead_id, campaign_name, ad_set_name, lead_name, email, phone, normalized_phone, store_name, city, status, assigned_to, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'New', ?, ?)
+          `, [
+            platformSource,
+            leadgenId,
+            campaignName,
+            adSetName,
+            leadName,
+            email || null,
+            phone || null,
+            normPhone || null,
+            storeName || null,
+            city || null,
+            assignedTo,
+            `Ingested via Meta Lead Ads integration. Form ID: ${formId}.`
+          ]);
+
+          dbRun(`
+            INSERT INTO lead_activities (lead_id, activity_type, activity_notes, created_by)
+            VALUES (?, 'system_created', ?, 'System')
+          `, [
+            savedLeadId,
+            `Lead automatically ingested via Meta Lead Ads framework. Platform: ${platformSource}. Campaign: '${campaignName}'.`
+          ]);
+
+          if (assignedTo) {
+            const assignedUser = activeUsers.find(u => u.id === assignedTo);
+            dbRun(`
+              INSERT INTO lead_activities (lead_id, activity_type, activity_notes, created_by)
+              VALUES (?, 'assigned', ?, 'System')
+            `, [
+              savedLeadId,
+              `Lead automatically routed to sales representative: ${assignedUser.username} (${assignedUser.email}).`
+            ]);
+
+            // Dispatch notification email
+            try {
+              const leadObj = {
+                source: platformSource,
+                lead_name: leadName,
+                email: email,
+                phone: phone,
+                store_name: storeName,
+                city: city,
+                notes: `Form ID: ${formId}`
+              };
+              mailer.sendLeadNotificationEmail(leadObj, assignedUser.email).catch(mailErr => {
+                console.error("[META WEBHOOK] Mail dispatch warning:", mailErr.message);
+              });
+            } catch (mailEx) {
+              console.error("[META WEBHOOK] Mail exception:", mailEx);
+            }
+          }
+
+          dbRun("UPDATE crm_settings SET setting_value = ?, updated_at = CURRENT_TIMESTAMP WHERE setting_key = 'meta_last_sync_timestamp'", [new Date().toISOString()]);
+
+          dbRun("INSERT INTO meta_sync_logs (lead_id, facebook_lead_id, status, payload) VALUES (?, ?, ?, ?)",
+            [savedLeadId, leadgenId, 'success', payloadStr]);
+          
+          console.log(`[META WEBHOOK] Lead ${leadgenId} ingested successfully. Lead ID: ${savedLeadId}`);
+        }
+      }
+    }
+
+    res.status(200).json({ success: true, message: "Webhook processed successfully." });
+  } catch (err) {
+    console.error('[META WEBHOOK PROCESSING ERROR]', err);
+    dbRun("INSERT INTO meta_sync_logs (status, error_message, payload) VALUES (?, ?, ?)",
+      ['failed', err.message, payloadStr]);
+    res.status(500).json({ error: "Internal processing failure." });
+  }
+});
+
+// GET /api/admin/meta/config - Retrieve Meta Integration Config
+app.get('/api/admin/meta/config', leadsAuth, (req, res) => {
+  try {
+    const pageId = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'meta_page_id'")?.setting_value || "";
+    const formId = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'meta_form_id'")?.setting_value || "";
+    const accessToken = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'meta_access_token'")?.setting_value || "";
+    const appSecret = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'meta_app_secret'")?.setting_value || "";
+    const verifyToken = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'meta_verify_token'")?.setting_value || "lai_meta_verify_token_2026";
+    const connStatus = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'meta_connection_status'")?.setting_value || "Disconnected";
+    const lastSync = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'meta_last_sync_timestamp'")?.setting_value || "";
+    const mappings = dbGet("SELECT setting_value FROM crm_settings WHERE setting_key = 'meta_lead_mappings'")?.setting_value || "{}";
+
+    res.json({
+      success: true,
+      config: {
+        page_id: pageId,
+        form_id: formId,
+        access_token: accessToken ? `${accessToken.substring(0, 10)}...${accessToken.slice(-8)}` : "",
+        app_secret: appSecret ? `${appSecret.substring(0, 4)}...${appSecret.slice(-4)}` : "",
+        verify_token: verifyToken,
+        connection_status: connStatus,
+        last_sync_timestamp: lastSync,
+        mappings: JSON.parse(mappings)
+      }
+    });
+  } catch (err) {
+    console.error('[GET META CONFIG ERROR]', err);
+    res.status(500).json({ error: "Failed to load Meta configuration settings." });
+  }
+});
+
+// POST /api/admin/meta/config - Update Meta Integration Config
+app.post('/api/admin/meta/config', leadsAuth, (req, res) => {
+  const { page_id, form_id, access_token, app_secret, mappings, connection_status } = req.body;
+  try {
+    if (page_id !== undefined) dbRun("UPDATE crm_settings SET setting_value = ? WHERE setting_key = 'meta_page_id'", [page_id]);
+    if (form_id !== undefined) dbRun("UPDATE crm_settings SET setting_value = ? WHERE setting_key = 'meta_form_id'", [form_id]);
+    
+    if (access_token !== undefined && !access_token.includes('...')) {
+      dbRun("UPDATE crm_settings SET setting_value = ? WHERE setting_key = 'meta_access_token'", [access_token]);
+    }
+    if (app_secret !== undefined && !app_secret.includes('...')) {
+      dbRun("UPDATE crm_settings SET setting_value = ? WHERE setting_key = 'meta_app_secret'", [app_secret]);
+    }
+    if (connection_status !== undefined) {
+      dbRun("UPDATE crm_settings SET setting_value = ? WHERE setting_key = 'meta_connection_status'", [connection_status]);
+    }
+    if (mappings !== undefined) {
+      dbRun("UPDATE crm_settings SET setting_value = ? WHERE setting_key = 'meta_lead_mappings'", [JSON.stringify(mappings)]);
+    }
+
+    res.json({ success: true, message: "Meta Lead Ads Integration settings updated successfully." });
+  } catch (err) {
+    console.error('[POST META CONFIG ERROR]', err);
+    res.status(500).json({ error: "Failed to save Meta configuration settings." });
+  }
+});
+
+// GET /api/admin/meta/logs - Retrieve recent Meta sync/webhook logs
+app.get('/api/admin/meta/logs', leadsAuth, (req, res) => {
+  try {
+    const logs = dbAll(`
+      SELECT l.*, ld.lead_name, ld.email as lead_email 
+      FROM meta_sync_logs l
+      LEFT JOIN leads ld ON l.lead_id = ld.id
+      ORDER BY l.created_at DESC
+      LIMIT 100
+    `);
+    res.json({ success: true, logs });
+  } catch (err) {
+    console.error('[GET META LOGS ERROR]', err);
+    res.status(500).json({ error: "Failed to fetch sync log history." });
+  }
+});
+
+// GET /api/admin/meta/dashboard - Retrieve sync metrics & breakdown
+app.get('/api/admin/meta/dashboard', leadsAuth, (req, res) => {
+  try {
+    const totalImported = (dbGet("SELECT COUNT(*) as c FROM leads WHERE source IN ('Facebook Lead Ads', 'Instagram Lead Ads')") || {}).c || 0;
+    const failedImports = (dbGet("SELECT COUNT(*) as c FROM meta_sync_logs WHERE status = 'failed'") || {}).c || 0;
+    const dupPrevented = (dbGet("SELECT COUNT(*) as c FROM meta_sync_logs WHERE status = 'duplicate'") || {}).c || 0;
+    const lastSuccessRow = dbGet("SELECT created_at FROM meta_sync_logs WHERE status = 'success' ORDER BY created_at DESC LIMIT 1");
+    const lastSync = lastSuccessRow ? lastSuccessRow.created_at : "Never";
+
+    const fbCount = (dbGet("SELECT COUNT(*) as c FROM leads WHERE source = 'Facebook Lead Ads'") || {}).c || 0;
+    const igCount = (dbGet("SELECT COUNT(*) as c FROM leads WHERE source = 'Instagram Lead Ads'") || {}).c || 0;
+
+    res.json({
+      success: true,
+      metrics: {
+        total_imported: totalImported,
+        failed_imports: failedImports,
+        duplicates_prevented: dupPrevented,
+        last_successful_sync: lastSync,
+        breakdown: {
+          facebook: fbCount,
+          instagram: igCount
+        }
+      }
+    });
+  } catch (err) {
+    console.error('[GET META DASHBOARD ERROR]', err);
+    res.status(500).json({ error: "Failed to fetch sync dashboard statistics." });
+  }
 });
 
 // Catch-all → index.html

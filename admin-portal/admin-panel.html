@@ -54,6 +54,12 @@
             <button class="tab-btn" onclick="switchTab('analytics', this); loadAnalyticsData();">
                 📊 Business Analytics
             </button>
+            <button class="tab-btn" onclick="switchTab('leads-management', this); initLeadsTab();">
+                🎯 Lead Management
+            </button>
+            <button class="tab-btn" onclick="switchTab('leads-integration', this); initIntegrationTab();">
+                🔌 Integrations & API
+            </button>
         </div>
 
         <!-- TAB 1: Existing Customers -->
@@ -491,6 +497,586 @@
                 </div>
             </div>
         </div>
+
+        <!-- TAB 4: Leads Management -->
+        <div id="tab-leads-management" class="tab-pane" style="display:none; padding: 1.5rem 0;">
+            <!-- Lead Dashboard widgets -->
+            <div id="leads-dashboard-widgets" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
+                <div class="stat-card" style="margin-bottom: 0;">
+                    <h3>Total Leads</h3>
+                    <div class="value" id="lead-kpi-total" style="color: #60A5FA;">0</div>
+                    <span style="font-size: 0.72rem; color: rgba(255,255,255,0.4); display: block;">All registered leads</span>
+                </div>
+                <div class="stat-card" style="margin-bottom: 0;">
+                    <h3>Leads Today</h3>
+                    <div class="value" id="lead-kpi-today" style="color: #FBBF24;">0</div>
+                    <span style="font-size: 0.72rem; color: rgba(255,255,255,0.4); display: block;">Added in last 24h</span>
+                </div>
+                <div class="stat-card" style="margin-bottom: 0;">
+                    <h3>This Month</h3>
+                    <div class="value" id="lead-kpi-month" style="color: #A78BFA;">0</div>
+                    <span style="font-size: 0.72rem; color: rgba(255,255,255,0.4); display: block;">Created this month</span>
+                </div>
+                <div class="stat-card" style="margin-bottom: 0;">
+                    <h3>Qualified</h3>
+                    <div class="value" id="lead-kpi-qualified" style="color: #34D399;">0</div>
+                    <span style="font-size: 0.72rem; color: rgba(255,255,255,0.4); display: block;">Verified opportunities</span>
+                </div>
+                <div class="stat-card" style="margin-bottom: 0;">
+                    <h3>Converted</h3>
+                    <div class="value" id="lead-kpi-converted" style="color: #10B981;">0</div>
+                    <span style="font-size: 0.72rem; color: rgba(255,255,255,0.4); display: block;">Closed deals</span>
+                </div>
+                <div class="stat-card" style="margin-bottom: 0;">
+                    <h3>Conv. Rate</h3>
+                    <div class="value" id="lead-kpi-rate" style="color: #EC4899;">0%</div>
+                    <span style="font-size: 0.72rem; color: rgba(255,255,255,0.4); display: block;">Conversion rate</span>
+                </div>
+            </div>
+
+            <!-- Leads Graphical Analytics -->
+            <div id="leads-charts-section" style="display: none; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 20px;">
+                    <h3 style="font-size: 0.9rem; font-weight: 700; color: #fff; margin-bottom: 1rem;">🎯 Leads by Status</h3>
+                    <div style="position: relative; height: 180px;"><canvas id="leadsStatusChart"></canvas></div>
+                </div>
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 20px;">
+                    <h3 style="font-size: 0.9rem; font-weight: 700; color: #fff; margin-bottom: 1rem;">🔌 Leads by Source</h3>
+                    <div style="position: relative; height: 180px;"><canvas id="leadsSourceChart"></canvas></div>
+                </div>
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 20px;">
+                    <h3 style="font-size: 0.9rem; font-weight: 700; color: #fff; margin-bottom: 1rem;">🗺️ Leads by City</h3>
+                    <div style="position: relative; height: 180px;"><canvas id="leadsCityChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Lead Pipeline Filters -->
+            <div class="filter-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                    <h3 style="font-size: 1.1rem; font-weight: 700; color: #fff; margin: 0;">🔍 Lead Pipeline Filters</h3>
+                    <button class="btn-admin" onclick="toggleLeadsCharts()" id="btn-toggle-charts" style="gap: 6px;">📈 Toggle Charts</button>
+                </div>
+                
+                <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+                    <input type="text" id="fl-search" placeholder="Search name, email, phone, store..." class="input-control">
+                    
+                    <select id="fl-source" class="input-control">
+                        <option value="">All Sources</option>
+                    </select>
+
+                    <select id="fl-status" class="input-control">
+                        <option value="">All Statuses</option>
+                        <option value="New">New</option>
+                        <option value="Contacted">Contacted</option>
+                        <option value="Qualified">Qualified</option>
+                        <option value="Demo Scheduled">Demo Scheduled</option>
+                        <option value="Converted">Converted</option>
+                        <option value="Lost">Lost</option>
+                    </select>
+
+                    <select id="fl-assigned" class="input-control">
+                        <option value="">All Assignees</option>
+                        <option value="unassigned">Unassigned Only</option>
+                    </select>
+
+                    <input type="text" id="fl-state" placeholder="State (e.g. GA)" class="input-control" maxlength="2">
+
+                    <select id="fl-sortby" class="input-control">
+                        <option value="created_at">Sort By: Date Created</option>
+                        <option value="lead_name">Sort By: Lead Name</option>
+                        <option value="status">Sort By: Status</option>
+                        <option value="source">Sort By: Source</option>
+                        <option value="store_name">Sort By: Store Name</option>
+                        <option value="city">Sort By: City</option>
+                    </select>
+
+                    <select id="fl-sortorder" class="input-control">
+                        <option value="desc">Order: Newest First</option>
+                        <option value="asc">Order: Oldest First</option>
+                    </select>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                    <button class="btn-admin" onclick="resetLeadFilters()">Reset</button>
+                    <button class="btn-admin-primary" onclick="fetchLeads(1)">Search Pipeline</button>
+                </div>
+            </div>
+
+            <!-- List Actions Toolbar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1rem 1.5rem; border-radius: 16px;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <span style="font-size: 0.85rem; color: rgba(255,255,255,0.6);"><strong id="leads-selected-count">0</strong> Selected</span>
+                    <select id="bulk-status-select" class="input-control" style="width: auto; padding: 0.45rem 1rem; font-size: 0.8rem;" disabled>
+                        <option value="">Bulk Update Status...</option>
+                        <option value="New">New</option>
+                        <option value="Contacted">Contacted</option>
+                        <option value="Qualified">Qualified</option>
+                        <option value="Demo Scheduled">Demo Scheduled</option>
+                        <option value="Converted">Converted</option>
+                        <option value="Lost">Lost</option>
+                    </select>
+                    <button class="btn-admin-primary" id="btn-bulk-update" onclick="applyBulkStatus()" style="padding: 0.45rem 1.25rem; font-size: 0.8rem;" disabled>Apply</button>
+                </div>
+                <button class="btn-admin-primary" onclick="openCreateLeadModal()" style="gap: 6px;">➕ Create Manual Lead</button>
+            </div>
+
+            <!-- Leads Data Table -->
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px; text-align: center;"><input type="checkbox" id="toggle-all-leads" onclick="toggleSelectAllLeads(this)"></th>
+                            <th>Lead Name</th>
+                            <th>Status</th>
+                            <th>Assigned To</th>
+                            <th>Source</th>
+                            <th>Campaign</th>
+                            <th>Store Name</th>
+                            <th>City / State</th>
+                            <th>POS System</th>
+                            <th>Date Created</th>
+                            <th style="text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leads-table-body">
+                        <tr><td colspan="11" style="text-align:center; padding:4rem; opacity:0.5;">Loading pipeline...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem;">
+                <div style="font-size: 0.85rem; color: rgba(255,255,255,0.6);" id="leads-page-info">
+                    Showing 0 - 0 of 0 leads
+                </div>
+                <div style="display: flex; gap: 0.5rem;" id="leads-pagination-buttons">
+                    <!-- Pagination buttons dynamically rendered -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: Leads Integration & API -->
+        <div id="tab-leads-integration" class="tab-pane" style="display:none; padding: 1.5rem 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); padding: 1.25rem 1.75rem; border-radius: 16px; backdrop-filter: blur(10px);">
+                <div>
+                    <h2 style="font-size: 1.35rem; font-weight: 800; color: #fff; margin: 0; display: flex; align-items: center; gap: 0.5rem;">🔌 Lead Ingestion & Integration API</h2>
+                    <span style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); display: block; margin-top: 0.25rem;">Configure external lead sources (Meta, Zapier, Webhooks) and auto-routing rules</span>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                
+                <!-- API Credentials Management -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 20px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3 style="font-size: 1rem; font-weight: 700; color: #fff; margin: 0; display: flex; align-items: center; gap: 0.5rem;">🔑 API Keys / Credentials</h3>
+                        <button class="btn-admin-primary" onclick="openCreateKeyModal()" style="padding: 0.45rem 1rem; font-size: 0.75rem; font-weight: 700; border-radius: 8px;">➕ Generate Key</button>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="data-table" style="min-width: 100%; border: none;">
+                            <thead>
+                                <tr style="background: rgba(255,255,255,0.03);">
+                                    <th style="padding: 0.5rem; text-align: left; font-size: 0.75rem;">KEY NAME</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-size: 0.75rem;">API KEY PREFIX</th>
+                                    <th style="padding: 0.5rem; text-align: center; font-size: 0.75rem;">STATUS</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-size: 0.75rem;">LAST USED</th>
+                                    <th style="padding: 0.5rem; text-align: right; font-size: 0.75rem;">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="api-keys-table-body">
+                                <tr><td colspan="5" style="text-align:center; padding:2rem; opacity:0.5; font-size:0.85rem;">No API Keys configured.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Assignment & Notification Rules -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 20px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);">
+                    <h3 style="font-size: 1rem; font-weight: 700; color: #fff; margin: 0 0 1.5rem 0; display: flex; align-items: center; gap: 0.5rem;">⚙️ Routing & Assignment Settings</h3>
+                    <form id="crm-settings-form" onsubmit="saveCrmSettings(event)">
+                        <div class="modal-field" style="margin-bottom: 1rem;">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Lead Assignment Mode</label>
+                            <select id="setting-assign-mode" class="input-control" onchange="toggleAssignModeFields()">
+                                <option value="round_robin">🔄 Round Robin (Distribute Equally to active staff)</option>
+                                <option value="single_user">👤 Single Assigned User</option>
+                            </select>
+                        </div>
+
+                        <div id="setting-assign-user-container" class="modal-field" style="margin-bottom: 1rem; display: none;">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Default Sales Agent</label>
+                            <select id="setting-assign-user" class="input-control">
+                                <!-- Staff users list -->
+                            </select>
+                        </div>
+
+                        <div class="modal-field" style="margin-bottom: 1.5rem;">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Alert Notification Emails (comma-separated)</label>
+                            <input type="text" id="setting-notify-emails" class="input-control" placeholder="manager@company.com, admin@company.com">
+                        </div>
+
+                        <button type="submit" class="btn-admin-primary" style="width: 100%; font-weight: 700; padding: 0.75rem;">💾 Save Settings</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Lead Sources Configuration -->
+            <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.5rem; margin-bottom: 2rem;">
+                
+                <!-- Lead Sources Admin -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 20px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3 style="font-size: 1rem; font-weight: 700; color: #fff; margin: 0; display: flex; align-items: center; gap: 0.5rem;">🔌 Registered Lead Sources</h3>
+                        <button class="btn-admin-primary" onclick="openAddSourceModal()" style="padding: 0.45rem 1rem; font-size: 0.75rem; font-weight: 700; border-radius: 8px;">➕ Add Source</button>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="data-table" style="min-width: 100%; border: none;">
+                            <thead>
+                                <tr style="background: rgba(255,255,255,0.03);">
+                                    <th style="padding: 0.5rem; text-align: left; font-size: 0.75rem;">SOURCE NAME</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-size: 0.75rem;">TYPE</th>
+                                    <th style="padding: 0.5rem; text-align: center; font-size: 0.75rem;">ACTIVE</th>
+                                    <th style="padding: 0.5rem; text-align: right; font-size: 0.75rem;">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lead-sources-table-body">
+                                <tr><td colspan="4" style="text-align:center; padding:2rem; opacity:0.5; font-size:0.85rem;">No Lead Sources configured.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- API Ingestion Guide Documentation -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 20px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2); display: flex; flex-direction: column;">
+                    <h3 style="font-size: 1rem; font-weight: 700; color: #10B981; margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">📖 Unified Ingestion Webhook Integration Guide</h3>
+                    <div style="font-size: 0.82rem; line-height: 1.5; color: rgba(255,255,255,0.7); overflow-y: auto; max-height: 380px; padding-right: 0.5rem;">
+                        <p style="margin-top: 0;">Connect external lead ingestion platforms (e.g., Zapier Webhooks, Make, or custom python/node scripts) directly into your CRM pipeline.</p>
+                        
+                        <strong style="color: #fff; display: block; margin-top: 0.75rem; font-size: 0.85rem;">Endpoint URL</strong>
+                        <pre id="ingest-endpoint-url" style="background: rgba(0,0,0,0.3); padding: 0.6rem; border-radius: 8px; font-family: monospace; font-size: 0.78rem; word-break: break-all; color: #a78bfa; border: 1px solid rgba(255,255,255,0.05); margin: 0.3rem 0;"></pre>
+                        
+                        <strong style="color: #fff; display: block; margin-top: 0.75rem; font-size: 0.85rem;">Headers Required</strong>
+                        <ul style="margin: 0.3rem 0; padding-left: 1.2rem;">
+                            <li><code>X-API-Key</code>: <span style="color: #e2e8f0;">Your API Key</span></li>
+                            <li><code>X-API-Secret</code>: <span style="color: #e2e8f0;">Your API Secret</span></li>
+                            <li><code>Content-Type</code>: <code>application/json</code></li>
+                        </ul>
+                        
+                        <strong style="color: #fff; display: block; margin-top: 0.75rem; font-size: 0.85rem;">JSON Payload Fields</strong>
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.78rem;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: #fff;">
+                                    <th style="text-align: left; padding: 4px 0;">Field</th>
+                                    <th style="text-align: left; padding: 4px 0;">Type</th>
+                                    <th style="text-align: left; padding: 4px 0;">Required</th>
+                                    <th style="text-align: left; padding: 4px 0;">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding: 4px 0; font-family: monospace;">source</td>
+                                    <td style="padding: 4px 0;">String</td>
+                                    <td style="padding: 4px 0; color: #F59E0B;">Yes</td>
+                                    <td style="padding: 4px 0; opacity: 0.8;">Must match a registered source (e.g. Meta Ads, Zapier)</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding: 4px 0; font-family: monospace;">lead_name</td>
+                                    <td style="padding: 4px 0;">String</td>
+                                    <td style="padding: 4px 0; color: #F59E0B;">Yes</td>
+                                    <td style="padding: 4px 0; opacity: 0.8;">Full name of the lead</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding: 4px 0; font-family: monospace;">email</td>
+                                    <td style="padding: 4px 0;">String</td>
+                                    <td style="padding: 4px 0;">No</td>
+                                    <td style="padding: 4px 0; opacity: 0.8;">Lead email address</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding: 4px 0; font-family: monospace;">phone</td>
+                                    <td style="padding: 4px 0;">String</td>
+                                    <td style="padding: 4px 0;">No</td>
+                                    <td style="padding: 4px 0; opacity: 0.8;">Lead phone number</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding: 4px 0; font-family: monospace;">external_lead_id</td>
+                                    <td style="padding: 4px 0;">String</td>
+                                    <td style="padding: 4px 0;">No</td>
+                                    <td style="padding: 4px 0; opacity: 0.8;">ID from Facebook or Zapier (used for duplicate prevention)</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding: 4px 0; font-family: monospace;">campaign_name</td>
+                                    <td style="padding: 4px 0;">String</td>
+                                    <td style="padding: 4px 0;">No</td>
+                                    <td style="padding: 4px 0; opacity: 0.8;">Name of marketing campaign</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <strong style="color: #fff; display: block; margin-top: 1rem; font-size: 0.85rem;">cURL Example Submission</strong>
+                        <pre style="background: rgba(0,0,0,0.3); padding: 0.6rem; border-radius: 8px; font-family: monospace; font-size: 0.75rem; white-space: pre-wrap; word-break: break-all; border: 1px solid rgba(255,255,255,0.05); color: #34D399; margin: 0.3rem 0;">curl -X POST &lt;endpoint_url&gt; \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your_key" \
+  -H "X-API-Secret: your_secret" \
+  -d '{
+    "source": "Meta Ads",
+    "lead_name": "Alexander Graham",
+    "email": "alex@telecom.com",
+    "phone": "4045550199",
+    "store_name": "Decatur Telecom",
+    "city": "Atlanta",
+    "state": "GA",
+    "notes": "Interested in Wifi Scanner package."
+  }'</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── Sync Monitoring Dashboard ─── -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; margin-top: 1.5rem;">
+                <!-- Card 1: Total Imported -->
+                <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.02) 100%); border: 1px solid rgba(59, 130, 246, 0.2); padding: 1.25rem; border-radius: 16px;">
+                    <span style="font-size: 0.75rem; font-weight: 700; color: #93C5FD; text-transform: uppercase; letter-spacing: 0.5px;">Total Meta Leads</span>
+                    <h2 id="meta-stat-total" style="font-size: 2rem; font-weight: 800; color: #fff; margin: 0.5rem 0 0.25rem 0;">0</h2>
+                    <span style="font-size: 0.72rem; color: rgba(255,255,255,0.4);" id="meta-breakdown-text">FB: 0 | IG: 0</span>
+                </div>
+                <!-- Card 2: Failed Webhooks -->
+                <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.02) 100%); border: 1px solid rgba(239, 68, 68, 0.2); padding: 1.25rem; border-radius: 16px;">
+                    <span style="font-size: 0.75rem; font-weight: 700; color: #F87171; text-transform: uppercase; letter-spacing: 0.5px;">Sync Failures</span>
+                    <h2 id="meta-stat-failed" style="font-size: 2rem; font-weight: 800; color: #fff; margin: 0.5rem 0 0.25rem 0;">0</h2>
+                    <span style="font-size: 0.72rem; color: rgba(255,255,255,0.4);">Failed Webhook ingest requests</span>
+                </div>
+                <!-- Card 3: Duplicates Prevented -->
+                <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.02) 100%); border: 1px solid rgba(245, 158, 11, 0.2); padding: 1.25rem; border-radius: 16px;">
+                    <span style="font-size: 0.75rem; font-weight: 700; color: #FBBF24; text-transform: uppercase; letter-spacing: 0.5px;">Duplicates Prevented</span>
+                    <h2 id="meta-stat-duplicates" style="font-size: 2rem; font-weight: 800; color: #fff; margin: 0.5rem 0 0.25rem 0;">0</h2>
+                    <span style="font-size: 0.72rem; color: rgba(255,255,255,0.4);">Merged/deduplicated leads</span>
+                </div>
+                <!-- Card 4: Last Successful Sync -->
+                <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 100%); border: 1px solid rgba(16, 185, 129, 0.2); padding: 1.25rem; border-radius: 16px;">
+                    <span style="font-size: 0.75rem; font-weight: 700; color: #34D399; text-transform: uppercase; letter-spacing: 0.5px;">Last Active Sync</span>
+                    <h2 id="meta-stat-last-sync" style="font-size: 1rem; font-weight: 800; color: #fff; margin: 0.75rem 0 0.4rem 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Never</h2>
+                    <span style="font-size: 0.72rem; color: rgba(255,255,255,0.4);">Platform sync time</span>
+                </div>
+            </div>
+
+            <!-- ─── Meta Connection Settings & Field Mapping Engine ─── -->
+            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                
+                <!-- Meta Settings Panel -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 20px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);">
+                    <h3 style="font-size: 1rem; font-weight: 700; color: #fff; margin: 0 0 1.5rem 0; display: flex; align-items: center; gap: 0.5rem;">📱 Meta Lead Ads Connection</h3>
+                    <form id="meta-config-form" onsubmit="saveMetaConfig(event)">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div class="modal-field">
+                                <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.72rem; text-transform: uppercase;">Facebook Page ID</label>
+                                <input type="text" id="meta-page-id" class="input-control" placeholder="e.g. 10484552938192">
+                            </div>
+                            <div class="modal-field">
+                                <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.72rem; text-transform: uppercase;">Facebook Form ID</label>
+                                <input type="text" id="meta-form-id" class="input-control" placeholder="e.g. 849204859203">
+                            </div>
+                        </div>
+
+                        <div class="modal-field" style="margin-bottom: 1rem;">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.72rem; text-transform: uppercase;">App Verify Token (For Webhook Subscription)</label>
+                            <input type="text" id="meta-verify-token" class="input-control" readonly style="background: rgba(0,0,0,0.2); opacity: 0.8; font-family: monospace;">
+                            <small style="color: rgba(255,255,255,0.4); font-size: 0.7rem; display: block; margin-top: 0.25rem;">Use this token when registering your Webhook URL in Meta App settings.</small>
+                        </div>
+
+                        <div class="modal-field" style="margin-bottom: 1rem;">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.72rem; text-transform: uppercase;">App Secret (For Signature Verification)</label>
+                            <input type="password" id="meta-app-secret" class="input-control" placeholder="••••••••••••••••••••••••••••••••">
+                            <small style="color: rgba(255,255,255,0.4); font-size: 0.7rem; display: block; margin-top: 0.25rem;">Leave empty to skip cryptographic signature checks during testing.</small>
+                        </div>
+
+                        <div class="modal-field" style="margin-bottom: 1rem;">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.72rem; text-transform: uppercase;">Meta User/Page Access Token</label>
+                            <textarea id="meta-access-token" class="input-control" rows="2" placeholder="EAAG... (Long-lived User Access Token)" style="font-family: monospace; font-size: 0.8rem; resize: none;"></textarea>
+                        </div>
+
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                            <div>
+                                <span style="font-size: 0.75rem; color: rgba(255,255,255,0.5);">STATUS:</span>
+                                <strong id="meta-connection-badge" style="font-size: 0.75rem; margin-left: 0.25rem; color: #EF4444; background: rgba(239,68,68,0.15); padding: 2px 8px; border-radius: 4px;">Disconnected</strong>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button type="button" class="btn-admin" onclick="simulateMetaWebhook()" style="font-size: 0.75rem; padding: 0.5rem 1rem;">🧪 Simulate Ingest</button>
+                                <button type="submit" class="btn-admin-primary" style="font-size: 0.75rem; padding: 0.5rem 1.25rem;">💾 Save Settings</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Field Mapping Engine Panel -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 20px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);">
+                    <h3 style="font-size: 1rem; font-weight: 700; color: #fff; margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">🗺️ Meta Lead Mapping Engine</h3>
+                    <p style="font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-bottom: 1.25rem; line-height: 1.4;">Map incoming Facebook Form field names to standard CRM database attributes.</p>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.85rem;" id="mapping-fields-container">
+                        <div style="display: grid; grid-template-columns: 1fr 12px 1fr; align-items: center; gap: 0.5rem;">
+                            <div>
+                                <span style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase;">Facebook Lead Field</span>
+                                <input type="text" id="map-key-name" class="input-control" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;" value="full_name">
+                            </div>
+                            <div style="text-align: center; color: rgba(255,255,255,0.3); font-size: 0.8rem; margin-top: 1.2rem;">➜</div>
+                            <div>
+                                <span style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase;">CRM Field</span>
+                                <input type="text" class="input-control" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; background: rgba(0,0,0,0.15);" readonly value="Lead Name (lead_name)">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 12px 1fr; align-items: center; gap: 0.5rem;">
+                            <div>
+                                <input type="text" id="map-key-phone" class="input-control" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;" value="phone_number">
+                            </div>
+                            <div style="text-align: center; color: rgba(255,255,255,0.3); font-size: 0.8rem;">➜</div>
+                            <div>
+                                <input type="text" class="input-control" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; background: rgba(0,0,0,0.15);" readonly value="Phone (phone)">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 12px 1fr; align-items: center; gap: 0.5rem;">
+                            <div>
+                                <input type="text" id="map-key-email" class="input-control" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;" value="email">
+                            </div>
+                            <div style="text-align: center; color: rgba(255,255,255,0.3); font-size: 0.8rem;">➜</div>
+                            <div>
+                                <input type="text" class="input-control" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; background: rgba(0,0,0,0.15);" readonly value="Email (email)">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 12px 1fr; align-items: center; gap: 0.5rem;">
+                            <div>
+                                <input type="text" id="map-key-store" class="input-control" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;" value="store_name">
+                            </div>
+                            <div style="text-align: center; color: rgba(255,255,255,0.3); font-size: 0.8rem;">➜</div>
+                            <div>
+                                <input type="text" class="input-control" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; background: rgba(0,0,0,0.15);" readonly value="Store Name (store_name)">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 12px 1fr; align-items: center; gap: 0.5rem;">
+                            <div>
+                                <input type="text" id="map-key-city" class="input-control" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;" value="city">
+                            </div>
+                            <div style="text-align: center; color: rgba(255,255,255,0.3); font-size: 0.8rem;">➜</div>
+                            <div>
+                                <input type="text" class="input-control" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; background: rgba(0,0,0,0.15);" readonly value="City (city)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── Webhook & Sync Audit Logs ─── -->
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 20px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2); margin-top: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                    <div>
+                        <h3 style="font-size: 1rem; font-weight: 700; color: #fff; margin: 0; display: flex; align-items: center; gap: 0.5rem;">📋 Webhook & Sync Audit Logs</h3>
+                        <span style="font-size: 0.75rem; color: rgba(255,255,255,0.5);">Real-time audit history of Meta Webhook imports and error retries</span>
+                    </div>
+                    <button class="btn-admin" onclick="loadMetaLogs()" style="padding: 0.45rem 1rem; font-size: 0.75rem; border-radius: 8px;">🔄 Refresh Logs</button>
+                </div>
+                <div class="table-container" style="max-height: 350px; overflow-y: auto;">
+                    <table class="data-table" style="min-width: 100%; border: none;">
+                        <thead>
+                            <tr style="background: rgba(255,255,255,0.03);">
+                                <th style="padding: 0.5rem; text-align: left; font-size: 0.75rem;">TIMESTAMP</th>
+                                <th style="padding: 0.5rem; text-align: left; font-size: 0.75rem;">FACEBOOK ID</th>
+                                <th style="padding: 0.5rem; text-align: left; font-size: 0.75rem;">MAPPED LEAD</th>
+                                <th style="padding: 0.5rem; text-align: center; font-size: 0.75rem;">STATUS</th>
+                                <th style="padding: 0.5rem; text-align: left; font-size: 0.75rem;">LOG DETAILS / ERROR</th>
+                                <th style="padding: 0.5rem; text-align: right; font-size: 0.75rem;">PAYLOAD</th>
+                            </tr>
+                        </thead>
+                        <tbody id="meta-logs-table-body">
+                            <tr><td colspan="6" style="text-align:center; padding:3rem; opacity:0.5; font-size:0.85rem;">No webhook sync logs recorded yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- META PAYLOAD INSPECTOR MODAL -->
+        <div id="meta-payload-modal" class="modal-overlay">
+            <div class="modal-content" style="max-width: 650px;">
+                <h2 style="margin-bottom:1rem; display: flex; align-items: center; gap: 0.5rem;">👁️ Raw Webhook Payload</h2>
+                <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1rem; max-height: 400px; overflow-y: auto;">
+                    <pre id="nk-meta-payload" style="font-family: monospace; font-size: 0.8rem; color: #34D399; margin: 0; white-space: pre-wrap; word-break: break-all;"></pre>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:1rem; margin-top: 1.5rem;">
+                    <button type="button" class="btn-admin" onclick="closeModal('meta-payload-modal')">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- GENERATE KEY MODAL -->
+        <div id="create-key-modal" class="modal-overlay">
+            <div class="modal-content" style="max-width: 450px;">
+                <h2 style="margin-bottom:1.5rem;">🔑 Generate Ingestion Credentials</h2>
+                <form id="create-key-form" onsubmit="submitCreateApiKey(event)">
+                    <div class="modal-field" style="margin-bottom: 1.5rem;">
+                        <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Application / Key Name *</label>
+                        <input type="text" id="nk-key-name" class="input-control" placeholder="e.g. Zapier Ingestion Node" required>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:1rem;">
+                        <button type="button" class="btn-admin" onclick="closeModal('create-key-modal')">Cancel</button>
+                        <button type="submit" class="btn-admin-primary">Generate API Key</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- REVEAL KEY SECRETS MODAL -->
+        <div id="reveal-key-modal" class="modal-overlay">
+            <div class="modal-content" style="max-width: 500px; text-align: left;">
+                <h2 style="margin-bottom:1.5rem; color: #10B981;">⚠️ API Key Generated Successfully</h2>
+                <p style="font-size: 0.85rem; color: rgba(255,255,255,0.8); margin-bottom: 1.5rem; line-height: 1.4;">
+                    Please copy the API secret below immediately. <strong>It will never be shown again</strong> and cannot be recovered if lost.
+                </p>
+                <div class="modal-field" style="margin-bottom: 1rem;">
+                    <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">API KEY (Public)</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="reveal-api-key" class="input-control" readonly style="font-family: monospace; font-size: 0.8rem; background: rgba(0,0,0,0.25);">
+                        <button class="btn-admin" onclick="copyToClipboard('reveal-api-key')" style="white-space: nowrap;">📋 Copy</button>
+                    </div>
+                </div>
+                <div class="modal-field" style="margin-bottom: 1.5rem;">
+                    <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">API SECRET (Private)</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="reveal-api-secret" class="input-control" readonly style="font-family: monospace; font-size: 0.8rem; background: rgba(0,0,0,0.25); color: #34D399;">
+                        <button class="btn-admin" onclick="copyToClipboard('reveal-api-secret')" style="white-space: nowrap;">📋 Copy</button>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end;">
+                    <button class="btn-admin-primary" onclick="closeModal('reveal-key-modal')">I Have Saved These Credentials</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADD LEAD SOURCE MODAL -->
+        <div id="add-source-modal" class="modal-overlay">
+            <div class="modal-content" style="max-width: 450px;">
+                <h2 style="margin-bottom:1.5rem;">🔌 Register Lead Source</h2>
+                <form id="add-source-form" onsubmit="submitCreateLeadSource(event)">
+                    <div class="modal-field" style="margin-bottom: 1rem;">
+                        <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Source Name *</label>
+                        <input type="text" id="ns-source-name" class="input-control" placeholder="e.g. Meta Ads, Zapier, Webhook" required>
+                    </div>
+                    <div class="modal-field" style="margin-bottom: 1.5rem;">
+                        <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Source Type</label>
+                        <select id="ns-source-type" class="input-control">
+                            <option value="meta">Meta Ads Integration (Facebook/Instagram)</option>
+                            <option value="zapier">Zapier Webhook</option>
+                            <option value="custom_api">Custom REST API</option>
+                            <option value="manual">Manual / Referral</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:1rem;">
+                        <button type="button" class="btn-admin" onclick="closeModal('add-source-modal')">Cancel</button>
+                        <button type="submit" class="btn-admin-primary">Register Source</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Modals -->
@@ -665,6 +1251,206 @@
                 </div>
             </div>
             <button class="btn-admin" style="margin-top:2rem;" onclick="closeModal('emp-logs-modal')">Close</button>
+        </div>
+    </div>
+
+    <!-- CREATE LEAD MODAL -->
+    <div id="create-lead-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 750px;">
+            <h2 style="margin-bottom:2rem;">➕ Create Manual Lead</h2>
+            <form id="create-lead-form" onsubmit="submitNewLead(event)">
+                <div class="modal-grid" style="grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div class="modal-field">
+                        <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Lead Name *</label>
+                        <input type="text" id="nl-name" class="input-control" placeholder="Jane Doe" required>
+                    </div>
+                    <div class="modal-field">
+                        <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Lead Source *</label>
+                        <select id="nl-source" class="input-control" required>
+                            <!-- Seeded sources here -->
+                        </select>
+                    </div>
+                    <div class="modal-field">
+                        <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Email Address</label>
+                        <input type="email" id="nl-email" class="input-control" placeholder="jane.doe@example.com">
+                    </div>
+                    <div class="modal-field">
+                        <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Phone Number</label>
+                        <input type="text" id="nl-phone" class="input-control" placeholder="(555) 555-5555">
+                    </div>
+                    <div class="modal-field">
+                        <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Store Name</label>
+                        <input type="text" id="nl-store" class="input-control" placeholder="Decatur Grocery">
+                    </div>
+                    <div class="modal-field">
+                        <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">POS System</label>
+                        <input type="text" id="nl-pos" class="input-control" placeholder="Clover / NCR">
+                    </div>
+                    <div class="modal-field">
+                        <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">City</label>
+                        <input type="text" id="nl-city" class="input-control" placeholder="Atlanta">
+                    </div>
+                    <div class="modal-field">
+                        <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">State</label>
+                        <input type="text" id="nl-state" class="input-control" placeholder="GA" maxlength="2">
+                    </div>
+                    <div class="modal-field">
+                        <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Campaign Name</label>
+                        <input type="text" id="nl-campaign" class="input-control" placeholder="Georgia Local Ads">
+                    </div>
+                    <div class="modal-field">
+                        <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Assigned To</label>
+                        <select id="nl-assigned" class="input-control">
+                            <option value="">Unassigned</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-field" style="margin-top: 1.5rem;">
+                    <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Initial Notes</label>
+                    <textarea id="nl-notes" class="input-control" placeholder="Any initial comments..." style="height: 100px; resize: none;"></textarea>
+                </div>
+                <div style="margin-top:2rem; display:flex; justify-content:flex-end; gap:1rem;">
+                    <button type="button" class="btn-admin" onclick="closeModal('create-lead-modal')">Cancel</button>
+                    <button type="submit" class="btn-admin-primary">Save Lead</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- LEAD DETAIL & WORKFLOW MODAL -->
+    <div id="lead-detail-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 1100px; width: 95%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="margin: 0; display: flex; align-items: center; gap: 0.75rem;">
+                    🎯 Lead Details: <span id="ld-display-name" style="color: #8B5CF6;">John Doe</span>
+                </h2>
+                <span id="ld-badge" class="badge-active">NEW</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1.2fr 1.5fr; gap: 2.5rem; max-height: 65vh; overflow-y: auto; padding-right: 0.5rem;">
+                <!-- Left Column: Edit Lead Info -->
+                <div style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.05); padding: 1.75rem; border-radius: 20px;">
+                    <h3 style="font-size: 1rem; color: #A78BFA; margin-top: 0; margin-bottom: 1.5rem; font-weight: 700; border-left: 3px solid #8B5CF6; padding-left: 0.5rem;">📋 Profile Information</h3>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="modal-field">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Lead Name</label>
+                            <input type="text" id="ld-name" class="input-control">
+                        </div>
+                        <div class="modal-field">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Source</label>
+                            <input type="text" id="ld-source" class="input-control" disabled>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="modal-field">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Email Address</label>
+                            <input type="email" id="ld-email" class="input-control">
+                        </div>
+                        <div class="modal-field">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Phone Number</label>
+                            <input type="text" id="ld-phone" class="input-control">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="modal-field">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Store Name</label>
+                            <input type="text" id="ld-store" class="input-control">
+                        </div>
+                        <div class="modal-field">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">POS System</label>
+                            <input type="text" id="ld-pos" class="input-control">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="modal-field">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">City</label>
+                            <input type="text" id="ld-city" class="input-control">
+                        </div>
+                        <div class="modal-field">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">State</label>
+                            <input type="text" id="ld-state" class="input-control" maxlength="2">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="modal-field">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Campaign Name</label>
+                            <input type="text" id="ld-campaign" class="input-control">
+                        </div>
+                        <div class="modal-field">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Ad Set Name</label>
+                            <input type="text" id="ld-adset" class="input-control">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="modal-field">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Assigned To</label>
+                            <select id="ld-assigned" class="input-control">
+                                <option value="">Unassigned</option>
+                            </select>
+                        </div>
+                        <div class="modal-field">
+                            <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Lead Status</label>
+                            <select id="ld-status" class="input-control">
+                                <option value="New">New</option>
+                                <option value="Contacted">Contacted</option>
+                                <option value="Qualified">Qualified</option>
+                                <option value="Demo Scheduled">Demo Scheduled</option>
+                                <option value="Converted">Converted</option>
+                                <option value="Lost">Lost</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="modal-field" style="margin-bottom: 1.5rem;">
+                        <label style="font-weight: 700; color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: uppercase;">Notes</label>
+                        <textarea id="ld-notes" class="input-control" style="height: 100px; resize: none;"></textarea>
+                    </div>
+
+                    <button class="btn-admin-primary" onclick="saveLeadDetails()" style="width: 100%; font-weight: 700;">💾 Save Profiles Updates</button>
+                </div>
+
+                <!-- Right Column: Lead Log Activity Timeline -->
+                <div style="display: flex; flex-direction: column; gap: 2rem;">
+                    <!-- Activity Logging Actions -->
+                    <div style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 20px;">
+                        <h3 style="font-size: 1rem; color: #10B981; margin-top: 0; margin-bottom: 1rem; font-weight: 700; border-left: 3px solid #10B981; padding-left: 0.5rem;">⚡ Log Sales Action</h3>
+                        
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                            <button class="btn-admin" id="btn-act-call" onclick="selectActivityType('call_logged')" style="flex: 1; min-width: 110px; gap: 4px; font-weight: 700; padding: 0.5rem;">📞 Log Call</button>
+                            <button class="btn-admin" id="btn-act-demo" onclick="selectActivityType('demo_scheduled')" style="flex: 1; min-width: 110px; gap: 4px; font-weight: 700; padding: 0.5rem;">📅 Demo</button>
+                            <button class="btn-admin" id="btn-act-convert" onclick="selectActivityType('converted')" style="flex: 1; min-width: 110px; gap: 4px; font-weight: 700; color: #10B981; border-color: rgba(16,185,129,0.2); padding: 0.5rem;">🏆 Convert</button>
+                            <button class="btn-admin" id="btn-act-lost" onclick="selectActivityType('lost')" style="flex: 1; min-width: 110px; gap: 4px; font-weight: 700; color: #EF4444; border-color: rgba(239,68,68,0.2); padding: 0.5rem;">❌ Lost</button>
+                        </div>
+
+                        <input type="hidden" id="selected-activity-type" value="note">
+                        
+                        <div style="margin-bottom: 1rem;">
+                            <textarea id="activity-comment" class="input-control" placeholder="Type activity comments or call notes here..." style="height: 80px; resize: none;"></textarea>
+                        </div>
+                        
+                        <button class="btn-admin-primary" onclick="submitLoggedActivity()" style="width: 100%; background: #10B981; font-weight: 700;">Post Action & Update Workflow</button>
+                    </div>
+
+                    <!-- Timeline -->
+                    <div>
+                        <h3 style="font-size: 1rem; color: #fff; margin-top: 0; margin-bottom: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">⏳ Activity History Timeline</h3>
+                        <div id="lead-activity-timeline" style="max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.15); border-radius: 16px; padding: 1rem; border: 1px solid rgba(255,255,255,0.03);">
+                            <!-- Timeline elements injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="border-top: 1px solid rgba(255,255,255,0.08); margin-top: 2rem; padding-top: 1.5rem; display: flex; justify-content: space-between;">
+                <button class="btn-admin" id="ld-delete-btn" style="background: rgba(239,68,68,0.1); color: #EF4444; border-color: rgba(239, 68, 68, 0.2);" onclick="deleteLead(currentLeadId)">Delete Lead</button>
+                <button class="btn-admin" onclick="closeModal('lead-detail-modal')">Close Window</button>
+            </div>
         </div>
     </div>
 
@@ -1205,6 +1991,8 @@
                         b.classList.add('active');
                     } else if (tabId === 'analytics' && text.includes('analytics')) {
                         b.classList.add('active');
+                    } else if (tabId === 'leads-management' && text.includes('lead management')) {
+                        b.classList.add('active');
                     }
                 });
             }
@@ -1578,6 +2366,1198 @@
                 btn.disabled = false;
                 btn.textContent = '🚀 Register & Create Customer Account';
             }
+        }
+
+        }
+
+        // ─── Lead Management Frontend Logic ──────────────────────────────────────────
+        let currentLeadPage = 1;
+        let leadsList = [];
+        let selectedLeadIds = [];
+        let leadsChartsInstance = { status: null, source: null, city: null };
+        let currentLeadId = null;
+
+        async function initLeadsTab() {
+            await fetchLeadSources();
+            await fetchStaffForLeads();
+            await loadLeadsAnalytics();
+            await fetchLeads(1);
+        }
+
+        async function fetchLeadSources() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/lead-sources`, { credentials: 'include' });
+                const res = await resp.json();
+                if (res.success) {
+                    const filterSelect = document.getElementById('fl-source');
+                    const formSelect = document.getElementById('nl-source');
+                    
+                    filterSelect.innerHTML = '<option value="">All Sources</option>';
+                    formSelect.innerHTML = '';
+                    
+                    res.data.forEach(src => {
+                        filterSelect.innerHTML += `<option value="${src.source_name}">${src.source_name}</option>`;
+                        formSelect.innerHTML += `<option value="${src.source_name}">${src.source_name}</option>`;
+                    });
+                }
+            } catch (e) {
+                console.error('Error fetching lead sources:', e);
+            }
+        }
+
+        async function fetchStaffForLeads() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/staff`, { credentials: 'include' });
+                const staff = await resp.json();
+                
+                const filterSelect = document.getElementById('fl-assigned');
+                const formSelectCreate = document.getElementById('nl-assigned');
+                const formSelectDetail = document.getElementById('ld-assigned');
+                
+                filterSelect.innerHTML = '<option value="">All Assignees</option><option value="unassigned">Unassigned Only</option>';
+                formSelectCreate.innerHTML = '<option value="">Unassigned</option>';
+                formSelectDetail.innerHTML = '<option value="">Unassigned</option>';
+                
+                staff.forEach(s => {
+                    const name = `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.username;
+                    filterSelect.innerHTML += `<option value="${s.id}">${name} (${s.role})</option>`;
+                    formSelectCreate.innerHTML += `<option value="${s.id}">${name}</option>`;
+                    formSelectDetail.innerHTML += `<option value="${s.id}">${name}</option>`;
+                });
+            } catch (e) {
+                console.error('Error fetching staff for leads:', e);
+            }
+        }
+
+        async function fetchLeads(page) {
+            currentLeadPage = page || 1;
+            document.getElementById('loading').style.display = 'block';
+
+            const getVal = (id) => document.getElementById(id)?.value || '';
+            const params = new URLSearchParams({
+                search: getVal('fl-search'),
+                source: getVal('fl-source'),
+                status: getVal('fl-status'),
+                assigned_to: getVal('fl-assigned'),
+                state: getVal('fl-state'),
+                sortBy: getVal('fl-sortby'),
+                sortOrder: getVal('fl-sortorder'),
+                page: currentLeadPage,
+                limit: 15
+            });
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/leads?${params}`, { credentials: 'include' });
+                const res = await resp.json();
+                if (res.success) {
+                    leadsList = res.data;
+                    renderLeadsTable();
+                    renderLeadsPagination(res.pagination);
+                    
+                    selectedLeadIds = [];
+                    document.getElementById('toggle-all-leads').checked = false;
+                    updateSelectionCount();
+                }
+            } catch (e) {
+                console.error('Error fetching leads:', e);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function renderLeadsTable() {
+            const tbody = document.getElementById('leads-table-body');
+            if (leadsList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:3rem; opacity:0.5;">No leads matched your criteria.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = leadsList.map(l => {
+                const assignedName = l.assigned_to 
+                    ? `${l.assigned_first_name || ''} ${l.assigned_last_name || ''}`.trim() || l.assigned_username 
+                    : '<span style="opacity:0.4;">Unassigned</span>';
+                    
+                let badgeClass = 'badge-inactive';
+                if (l.status === 'New') badgeClass = 'badge-new';
+                else if (l.status === 'Contacted') badgeClass = 'badge-contacted';
+                else if (l.status === 'Qualified') badgeClass = 'badge-qualified';
+                else if (l.status === 'Demo Scheduled') badgeClass = 'badge-demo';
+                else if (l.status === 'Converted') badgeClass = 'badge-converted';
+                else if (l.status === 'Lost') badgeClass = 'badge-lost';
+
+                const dateStr = new Date(l.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+
+                return `
+                    <tr>
+                        <td style="text-align: center;">
+                            <input type="checkbox" class="lead-checkbox" value="${l.id}" ${selectedLeadIds.includes(l.id) ? 'checked' : ''} onclick="toggleSelectLead(event, ${l.id})">
+                        </td>
+                        <td style="font-weight: 700; color: #fff;">${l.lead_name || 'N/A'}</td>
+                        <td><span class="lead-badge-style ${badgeClass}">${l.status || 'New'}</span></td>
+                        <td>${assignedName}</td>
+                        <td><span style="font-weight:600; color: #A78BFA; font-size:0.8rem;">🔌 ${l.source}</span></td>
+                        <td style="font-size:0.8rem; opacity:0.75;">${l.campaign_name || '<span style="opacity:0.3;">-</span>'}</td>
+                        <td>${l.store_name || '<span style="opacity:0.3;">-</span>'}</td>
+                        <td>${l.city || '-'}${l.state ? ', ' + l.state : ''}</td>
+                        <td style="font-size:0.8rem; font-family:monospace; color:#60A5FA;">${l.pos_system || '<span style="opacity:0.3;">-</span>'}</td>
+                        <td style="font-size:0.8rem; opacity:0.6;">${dateStr}</td>
+                        <td style="text-align: right;">
+                            <button class="btn-admin-actions" onclick="openLeadDetail(${l.id})">🎯 View Details</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function toggleSelectLead(e, id) {
+            e.stopPropagation();
+            if (selectedLeadIds.includes(id)) {
+                selectedLeadIds = selectedLeadIds.filter(x => x !== id);
+            } else {
+                selectedLeadIds.push(id);
+            }
+            updateSelectionCount();
+            
+            const allCheckboxes = document.querySelectorAll('.lead-checkbox');
+            const checkedCount = Array.from(allCheckboxes).filter(c => c.checked).length;
+            document.getElementById('toggle-all-leads').checked = checkedCount === allCheckboxes.length;
+        }
+
+        function toggleSelectAllLeads(chk) {
+            const checkboxes = document.querySelectorAll('.lead-checkbox');
+            checkboxes.forEach(c => {
+                c.checked = chk.checked;
+                const id = parseInt(c.value);
+                if (chk.checked) {
+                    if (!selectedLeadIds.includes(id)) selectedLeadIds.push(id);
+                } else {
+                    selectedLeadIds = selectedLeadIds.filter(x => x !== id);
+                }
+            });
+            updateSelectionCount();
+        }
+
+        function updateSelectionCount() {
+            const count = selectedLeadIds.length;
+            document.getElementById('leads-selected-count').innerText = count;
+            
+            const bulkSelect = document.getElementById('bulk-status-select');
+            const bulkBtn = document.getElementById('btn-bulk-update');
+            
+            if (count > 0) {
+                bulkSelect.disabled = false;
+                bulkBtn.disabled = false;
+            } else {
+                bulkSelect.disabled = true;
+                bulkBtn.disabled = true;
+                bulkSelect.value = '';
+            }
+        }
+
+        async function applyBulkStatus() {
+            const status = document.getElementById('bulk-status-select').value;
+            if (!status) return alert('Please select a status to apply.');
+
+            if (!confirm(`Are you sure you want to update ${selectedLeadIds.length} leads to status '${status}'?`)) return;
+
+            try {
+                document.getElementById('loading').style.display = 'block';
+                const resp = await fetch(`${API_BASE}/api/leads/bulk-status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: selectedLeadIds, status }),
+                    credentials: 'include'
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    alert(res.message);
+                    await fetchLeads(currentLeadPage);
+                    await loadLeadsAnalytics();
+                } else {
+                    alert('Failed: ' + res.error);
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Server connection error.');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function renderLeadsPagination(p) {
+            const info = document.getElementById('leads-page-info');
+            const start = p.total === 0 ? 0 : (p.page - 1) * p.limit + 1;
+            const end = Math.min(p.page * p.limit, p.total);
+            info.innerText = `Showing ${start} - ${end} of ${p.total} leads`;
+
+            const container = document.getElementById('leads-pagination-buttons');
+            container.innerHTML = '';
+
+            if (p.totalPages <= 1) return;
+
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'btn-admin';
+            prevBtn.innerText = '◀';
+            prevBtn.disabled = p.page === 1;
+            prevBtn.onclick = () => fetchLeads(p.page - 1);
+            container.appendChild(prevBtn);
+
+            for (let i = 1; i <= p.totalPages; i++) {
+                if (i === 1 || i === p.totalPages || (i >= p.page - 2 && i <= p.page + 2)) {
+                    const pageBtn = document.createElement('button');
+                    pageBtn.className = i === p.page ? 'btn-admin-primary' : 'btn-admin';
+                    pageBtn.innerText = i;
+                    pageBtn.style.padding = '0.5rem 1rem';
+                    pageBtn.onclick = () => fetchLeads(i);
+                    container.appendChild(pageBtn);
+                } else if (i === 2 || i === p.totalPages - 1) {
+                    const span = document.createElement('span');
+                    span.innerText = '...';
+                    span.style.cssText = 'color:rgba(255,255,255,0.4); padding: 0.5rem 0.5rem;';
+                    container.appendChild(span);
+                }
+            }
+
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'btn-admin';
+            nextBtn.innerText = '▶';
+            nextBtn.disabled = p.page === p.totalPages;
+            nextBtn.onclick = () => fetchLeads(p.page + 1);
+            container.appendChild(nextBtn);
+        }
+
+        function openCreateLeadModal() {
+            document.getElementById('create-lead-form').reset();
+            document.getElementById('create-lead-modal').style.display = 'flex';
+        }
+
+        async function submitNewLead(e) {
+            e.preventDefault();
+            const payload = {
+                lead_name: document.getElementById('nl-name').value,
+                source: document.getElementById('nl-source').value,
+                email: document.getElementById('nl-email').value,
+                phone: document.getElementById('nl-phone').value,
+                store_name: document.getElementById('nl-store').value,
+                pos_system: document.getElementById('nl-pos').value,
+                city: document.getElementById('nl-city').value,
+                state: document.getElementById('nl-state').value,
+                campaign_name: document.getElementById('nl-campaign').value,
+                assigned_to: document.getElementById('nl-assigned').value,
+                notes: document.getElementById('nl-notes').value,
+                status: 'New'
+            };
+
+            try {
+                document.getElementById('loading').style.display = 'block';
+                const resp = await fetch(`${API_BASE}/api/leads`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+                const res = await resp.json();
+                if (resp.ok && res.success) {
+                    if (res.duplicate) {
+                        alert(`⚠️ Duplicate Lead detected!\nLinked existing lead ID: ${res.leadId}`);
+                    } else {
+                        alert('✅ Lead created successfully!');
+                    }
+                    closeModal('create-lead-modal');
+                    await fetchLeads(1);
+                    await loadLeadsAnalytics();
+                } else {
+                    alert('Error: ' + res.error);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Server connection error.');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        async function openLeadDetail(id) {
+            currentLeadId = id;
+            try {
+                document.getElementById('loading').style.display = 'block';
+                const resp = await fetch(`${API_BASE}/api/leads/${id}`, { credentials: 'include' });
+                const res = await resp.json();
+                if (res.success) {
+                    const l = res.lead;
+                    
+                    document.getElementById('ld-display-name').innerText = l.lead_name || 'N/A';
+                    document.getElementById('ld-name').value = l.lead_name || '';
+                    document.getElementById('ld-source').value = l.source || '';
+                    document.getElementById('ld-email').value = l.email || '';
+                    document.getElementById('ld-phone').value = l.phone || '';
+                    document.getElementById('ld-store').value = l.store_name || '';
+                    document.getElementById('ld-pos').value = l.pos_system || '';
+                    document.getElementById('ld-city').value = l.city || '';
+                    document.getElementById('ld-state').value = l.state || '';
+                    document.getElementById('ld-campaign').value = l.campaign_name || '';
+                    document.getElementById('ld-adset').value = l.ad_set_name || '';
+                    document.getElementById('ld-assigned').value = l.assigned_to || '';
+                    document.getElementById('ld-status').value = l.status || 'New';
+                    document.getElementById('ld-notes').value = l.notes || '';
+                    
+                    const badge = document.getElementById('ld-badge');
+                    badge.innerText = (l.status || 'New').toUpperCase();
+                    badge.className = `lead-badge-style ${getStatusBadgeClass(l.status)}`;
+
+                    renderLeadActivities(res.activities);
+
+                    selectActivityType('note');
+                    document.getElementById('activity-comment').value = '';
+
+                    document.getElementById('lead-detail-modal').style.display = 'flex';
+                    
+                    const role = document.body.getAttribute('data-role');
+                    const delBtn = document.getElementById('ld-delete-btn');
+                    if (delBtn) {
+                        delBtn.style.display = ['admin','manager'].includes(role) ? 'block' : 'none';
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Failed to load lead details.');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function getStatusBadgeClass(status) {
+            if (status === 'New') return 'badge-new';
+            if (status === 'Contacted') return 'badge-contacted';
+            if (status === 'Qualified') return 'badge-qualified';
+            if (status === 'Demo Scheduled') return 'badge-demo';
+            if (status === 'Converted') return 'badge-converted';
+            if (status === 'Lost') return 'badge-lost';
+            return 'badge-inactive';
+        }
+
+        function renderLeadActivities(activities) {
+            const container = document.getElementById('lead-activity-timeline');
+            if (activities.length === 0) {
+                container.innerHTML = '<div style="opacity:0.5; text-align:center; padding:1.5rem; font-size:0.85rem;">No activities logged yet.</div>';
+                return;
+            }
+
+            container.innerHTML = activities.map(act => {
+                const dateStr = new Date(act.created_at).toLocaleString();
+                
+                let typeLabel = act.activity_type.replace('_', ' ').toUpperCase();
+                let typeColor = '#A78BFA';
+                let icon = '📝';
+                
+                if (act.activity_type === 'status_change') { typeColor = '#F59E0B'; icon = '🔄'; }
+                else if (act.activity_type === 'assigned') { typeColor = '#3B82F6'; icon = '👤'; }
+                else if (act.activity_type === 'call_logged') { typeColor = '#60A5FA'; icon = '📞'; }
+                else if (act.activity_type === 'demo_scheduled') { typeColor = '#8B5CF6'; icon = '📅'; }
+                else if (act.activity_type === 'converted') { typeColor = '#10B981'; icon = '🏆'; }
+                else if (act.activity_type === 'lost') { typeColor = '#EF4444'; icon = '❌'; }
+                else if (act.activity_type === 'duplicate_submission') { typeColor = '#EC4899'; icon = '⚠️'; }
+
+                return `
+                    <div style="border-left: 2px solid ${typeColor}; padding-left: 1rem; margin-bottom: 1.25rem; position: relative;">
+                        <div style="position: absolute; left: -7px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: ${typeColor};"></div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; opacity:0.5; margin-bottom:3px;">
+                            <span style="font-weight:700; color:${typeColor};">${icon} ${typeLabel}</span>
+                            <span>${dateStr}</span>
+                        </div>
+                        <div style="font-size:0.8rem; color:rgba(255,255,255,0.9); line-height:1.4;">${act.activity_notes || ''}</div>
+                        <div style="font-size:0.7rem; opacity:0.4; margin-top:2px;">Logged by: ${act.created_by}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectActivityType(type) {
+            document.getElementById('selected-activity-type').value = type;
+            
+            const buttons = {
+                'call_logged': 'btn-act-call',
+                'demo_scheduled': 'btn-act-demo',
+                'converted': 'btn-act-convert',
+                'lost': 'btn-act-lost'
+            };
+
+            Object.values(buttons).forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    btn.style.background = 'rgba(255,255,255,0.03)';
+                    btn.style.borderColor = 'rgba(255,255,255,0.1)';
+                }
+            });
+
+            const activeId = buttons[type];
+            const activeBtn = document.getElementById(activeId);
+            if (activeBtn) {
+                if (type === 'call_logged') { activeBtn.style.background = 'rgba(96,165,250,0.15)'; activeBtn.style.borderColor = 'rgba(96,165,250,0.3)'; }
+                else if (type === 'demo_scheduled') { activeBtn.style.background = 'rgba(139,92,246,0.15)'; activeBtn.style.borderColor = 'rgba(139,92,246,0.3)'; }
+                else if (type === 'converted') { activeBtn.style.background = 'rgba(16,185,129,0.15)'; activeBtn.style.borderColor = 'rgba(16,185,129,0.3)'; }
+                else if (type === 'lost') { activeBtn.style.background = 'rgba(239,68,68,0.15)'; activeBtn.style.borderColor = 'rgba(239,68,68,0.3)'; }
+            }
+        }
+
+        async function submitLoggedActivity() {
+            const type = document.getElementById('selected-activity-type').value;
+            const comment = document.getElementById('activity-comment').value;
+
+            if (!comment && type === 'note') {
+                return alert('Please write a note comment before posting.');
+            }
+
+            try {
+                document.getElementById('loading').style.display = 'block';
+                const resp = await fetch(`${API_BASE}/api/leads/${currentLeadId}/activity`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ activity_type: type, activity_notes: comment }),
+                    credentials: 'include'
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    document.getElementById('activity-comment').value = '';
+                    await openLeadDetail(currentLeadId);
+                    await fetchLeads(currentLeadPage);
+                    await loadLeadsAnalytics();
+                } else {
+                    alert('Failed: ' + res.error);
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Server connection error.');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        async function saveLeadDetails() {
+            const payload = {
+                lead_name: document.getElementById('ld-name').value,
+                email: document.getElementById('ld-email').value,
+                phone: document.getElementById('ld-phone').value,
+                store_name: document.getElementById('ld-store').value,
+                pos_system: document.getElementById('ld-pos').value,
+                city: document.getElementById('ld-city').value,
+                state: document.getElementById('ld-state').value,
+                campaign_name: document.getElementById('ld-campaign').value,
+                ad_set_name: document.getElementById('ld-adset').value,
+                assigned_to: document.getElementById('ld-assigned').value,
+                status: document.getElementById('ld-status').value,
+                notes: document.getElementById('ld-notes').value
+            };
+
+            try {
+                document.getElementById('loading').style.display = 'block';
+                const resp = await fetch(`${API_BASE}/api/leads/${currentLeadId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    alert('Lead profile updated successfully!');
+                    await openLeadDetail(currentLeadId);
+                    await fetchLeads(currentLeadPage);
+                    await loadLeadsAnalytics();
+                } else {
+                    alert('Failed: ' + res.error);
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Server connection error.');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        async function deleteLead(id) {
+            if (!confirm('Are you sure you want to PERMANENTLY delete this lead?')) return;
+            try {
+                document.getElementById('loading').style.display = 'block';
+                const resp = await fetch(`${API_BASE}/api/leads/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    alert('Lead deleted successfully.');
+                    closeModal('lead-detail-modal');
+                    await fetchLeads(currentLeadPage);
+                    await loadLeadsAnalytics();
+                } else {
+                    alert('Failed: ' + res.error);
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Server error.');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        async function loadLeadsAnalytics() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/analytics/leads`, { credentials: 'include' });
+                const res = await resp.json();
+                if (res.success) {
+                    document.getElementById('lead-kpi-total').innerText = res.widgets.totalLeads;
+                    document.getElementById('lead-kpi-today').innerText = res.widgets.leadsToday;
+                    document.getElementById('lead-kpi-month').innerText = res.widgets.leadsThisMonth;
+                    document.getElementById('lead-kpi-qualified').innerText = res.widgets.qualifiedLeads;
+                    document.getElementById('lead-kpi-converted').innerText = res.widgets.convertedLeads;
+                    document.getElementById('lead-kpi-rate').innerText = res.widgets.conversionRate + '%';
+
+                    renderLeadsCharts(res.charts);
+                }
+            } catch (e) {
+                console.error('Error loading lead analytics:', e);
+            }
+        }
+
+        function renderLeadsCharts(charts) {
+            const ctxStatus = document.getElementById('leadsStatusChart').getContext('2d');
+            if (leadsChartsInstance.status) leadsChartsInstance.status.destroy();
+            
+            const statusLabels = charts.leadsByStatus.map(x => x.name);
+            const statusData = charts.leadsByStatus.map(x => x.count);
+            
+            leadsChartsInstance.status = new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        data: statusData,
+                        backgroundColor: ['#60A5FA', '#FBBF24', '#A78BFA', '#10B981', '#34D399', '#EF4444', '#6B7280'],
+                        borderWidth: 1,
+                        borderColor: '#1e1b29'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { color: '#fff', font: { size: 9 } } }
+                    }
+                }
+            });
+
+            const ctxSource = document.getElementById('leadsSourceChart').getContext('2d');
+            if (leadsChartsInstance.source) leadsChartsInstance.source.destroy();
+            
+            const sourceLabels = charts.leadsBySource.map(x => x.source);
+            const sourceData = charts.leadsBySource.map(x => x.count);
+            
+            leadsChartsInstance.source = new Chart(ctxSource, {
+                type: 'pie',
+                data: {
+                    labels: sourceLabels,
+                    datasets: [{
+                        data: sourceData,
+                        backgroundColor: ['#A78BFA', '#3B82F6', '#10B981', '#EC4899', '#F59E0B'],
+                        borderWidth: 1,
+                        borderColor: '#1e1b29'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { color: '#fff', font: { size: 9 } } }
+                    }
+                }
+            });
+
+            const ctxCity = document.getElementById('leadsCityChart').getContext('2d');
+            if (leadsChartsInstance.city) leadsChartsInstance.city.destroy();
+            
+            const cityLabels = charts.leadsByCity.map(x => x.name);
+            const cityData = charts.leadsByCity.map(x => x.count);
+            
+            leadsChartsInstance.city = new Chart(ctxCity, {
+                type: 'bar',
+                data: {
+                    labels: cityLabels,
+                    datasets: [{
+                        label: 'Leads by City',
+                        data: cityData,
+                        backgroundColor: 'rgba(139, 92, 246, 0.6)',
+                        borderColor: '#8B5CF6',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#fff', font: { size: 8 } } },
+                        y: { ticks: { color: '#fff', stepSize: 1 } }
+                    }
+                }
+            });
+        }
+
+        function toggleLeadsCharts() {
+            const section = document.getElementById('leads-charts-section');
+            const btn = document.getElementById('btn-toggle-charts');
+            if (section.style.display === 'none') {
+                section.style.display = 'grid';
+                btn.innerText = '📉 Hide Charts';
+            } else {
+                section.style.display = 'none';
+                btn.innerText = '📈 Show Charts';
+            }
+        }
+
+        }
+
+        // ─── Lead Integration Tab Controllers ─────────────────────────────────────────
+        async function initIntegrationTab() {
+            // Update documentation webhook endpoint URL dynamically
+            const endpoint = `${window.location.protocol}//${window.location.host}${API_BASE}/api/leads/ingest`;
+            document.getElementById('ingest-endpoint-url').innerText = endpoint;
+
+            await populateStaffForSettings();
+            await loadCrmSettings();
+            await loadApiKeys();
+            await loadAdminLeadSources();
+            await loadMetaConfig();
+            await loadMetaLogs();
+            await loadMetaDashboard();
+        }
+
+        async function loadMetaConfig() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/meta/config`, { credentials: 'include' });
+                const res = await resp.json();
+                if (res.success && res.config) {
+                    const c = res.config;
+                    document.getElementById('meta-page-id').value = c.page_id || '';
+                    document.getElementById('meta-form-id').value = c.form_id || '';
+                    document.getElementById('meta-verify-token').value = c.verify_token || 'lai_meta_verify_token_2026';
+                    
+                    if (c.access_token) {
+                        document.getElementById('meta-access-token').value = c.access_token;
+                    } else {
+                        document.getElementById('meta-access-token').value = '';
+                    }
+                    if (c.app_secret) {
+                        document.getElementById('meta-app-secret').value = c.app_secret;
+                    } else {
+                        document.getElementById('meta-app-secret').value = '';
+                    }
+
+                    const badge = document.getElementById('meta-connection-badge');
+                    badge.innerText = c.connection_status || 'Disconnected';
+                    if (c.connection_status === 'Connected') {
+                        badge.style.color = '#10B981';
+                        badge.style.background = 'rgba(16, 185, 129, 0.15)';
+                    } else {
+                        badge.style.color = '#EF4444';
+                        badge.style.background = 'rgba(239, 68, 68, 0.15)';
+                    }
+
+                    if (c.mappings) {
+                        if (c.mappings.full_name || c.mappings.lead_name) document.getElementById('map-key-name').value = c.mappings.full_name || c.mappings.lead_name || 'full_name';
+                        if (c.mappings.phone || c.mappings.phone_number) document.getElementById('map-key-phone').value = c.mappings.phone || c.mappings.phone_number || 'phone_number';
+                        if (c.mappings.email) document.getElementById('map-key-email').value = c.mappings.email || 'email';
+                        if (c.mappings.store_name) document.getElementById('map-key-store').value = c.mappings.store_name || 'store_name';
+                        if (c.mappings.city) document.getElementById('map-key-city').value = c.mappings.city || 'city';
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load Meta Config:', e);
+            }
+        }
+
+        async function saveMetaConfig(e) {
+            if (e) e.preventDefault();
+            
+            const pageId = document.getElementById('meta-page-id').value;
+            const formId = document.getElementById('meta-form-id').value;
+            const accessToken = document.getElementById('meta-access-token').value;
+            const appSecret = document.getElementById('meta-app-secret').value;
+
+            // Generate mappings payload
+            const mappings = {
+                [document.getElementById('map-key-name').value || 'full_name']: 'lead_name',
+                [document.getElementById('map-key-phone').value || 'phone_number']: 'phone',
+                [document.getElementById('map-key-email').value || 'email']: 'email',
+                [document.getElementById('map-key-store').value || 'store_name']: 'store_name',
+                [document.getElementById('map-key-city').value || 'city']: 'city'
+            };
+
+            const payload = {
+                page_id: pageId,
+                form_id: formId,
+                access_token: accessToken,
+                app_secret: appSecret,
+                mappings: mappings,
+                connection_status: (pageId && accessToken) ? 'Connected' : 'Disconnected'
+            };
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/meta/config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    alert('✅ Meta Lead Ads Settings saved successfully!');
+                    await loadMetaConfig();
+                } else {
+                    alert('❌ Failed to save Meta Config: ' + res.error);
+                }
+            } catch (err) {
+                console.error('Save Meta Config error:', err);
+                alert('❌ Connection error saving Meta Settings.');
+            }
+        }
+
+        async function loadMetaLogs() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/meta/logs`, { credentials: 'include' });
+                const res = await resp.json();
+                const tbody = document.getElementById('meta-logs-table-body');
+                if (res.success && res.logs && res.logs.length > 0) {
+                    tbody.innerHTML = res.logs.map(log => {
+                        const dateStr = new Date(log.created_at).toLocaleString();
+                        let statusBadge = '';
+                        if (log.status === 'success') {
+                            statusBadge = '<span style="background: rgba(16, 185, 129, 0.15); color: #34D399; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">SUCCESS</span>';
+                        } else if (log.status === 'duplicate') {
+                            statusBadge = '<span style="background: rgba(245, 158, 11, 0.15); color: #FBBF24; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">DUPLICATE</span>';
+                        } else {
+                            statusBadge = '<span style="background: rgba(239, 68, 68, 0.15); color: #F87171; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">FAILED</span>';
+                        }
+
+                        const mappedLead = log.lead_name 
+                            ? `<a href="#" onclick="openLeadDetail(${log.lead_id}); return false;" style="color: #60A5FA; text-decoration: none; font-weight: 700;">${log.lead_name}</a>`
+                            : '<span style="opacity: 0.5;">N/A</span>';
+
+                        const errorMsg = log.error_message 
+                            ? `<span style="color: #F87171; font-size: 0.78rem;">${log.error_message}</span>`
+                            : '<span style="opacity: 0.5; font-size: 0.78rem;">Successfully ingested lead gen form submission</span>';
+
+                        // Escape payload quotes securely
+                        const payloadClean = (log.payload || '{}').replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+
+                        return `
+                            <tr>
+                                <td style="padding: 0.75rem 0.5rem; font-size: 0.8rem;">${dateStr}</td>
+                                <td style="padding: 0.75rem 0.5rem; font-family: monospace; font-size: 0.8rem; color: #a78bfa;">${log.facebook_lead_id || 'N/A'}</td>
+                                <td style="padding: 0.75rem 0.5rem;">${mappedLead}</td>
+                                <td style="padding: 0.75rem 0.5rem; text-align: center;">${statusBadge}</td>
+                                <td style="padding: 0.75rem 0.5rem;">${errorMsg}</td>
+                                <td style="padding: 0.75rem 0.5rem; text-align: right;">
+                                    <button class="btn-admin" onclick="showMetaPayload(\`${payloadClean}\`)" style="padding: 0.25rem 0.6rem; font-size: 0.7rem;">Inspector</button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:3rem; opacity:0.5; font-size:0.85rem;">No webhook sync logs recorded yet.</td></tr>';
+                }
+            } catch (e) {
+                console.error('Failed to load Meta Webhook Logs:', e);
+            }
+        }
+
+        function showMetaPayload(payloadStr) {
+            try {
+                const parsed = JSON.parse(payloadStr);
+                document.getElementById('nk-meta-payload').innerText = JSON.stringify(parsed, null, 2);
+            } catch (e) {
+                document.getElementById('nk-meta-payload').innerText = payloadStr;
+            }
+            document.getElementById('meta-payload-modal').style.display = 'flex';
+        }
+
+        async function loadMetaDashboard() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/meta/dashboard`, { credentials: 'include' });
+                const res = await resp.json();
+                if (res.success && res.metrics) {
+                    const m = res.metrics;
+                    document.getElementById('meta-stat-total').innerText = m.total_imported;
+                    document.getElementById('meta-stat-failed').innerText = m.failed_imports;
+                    document.getElementById('meta-stat-duplicates').innerText = m.duplicates_prevented;
+                    
+                    const lastSync = m.last_successful_sync !== 'Never' 
+                        ? new Date(m.last_successful_sync).toLocaleString()
+                        : 'Never';
+                    document.getElementById('meta-stat-last-sync').innerText = lastSync;
+
+                    const fb = m.breakdown?.facebook || 0;
+                    const ig = m.breakdown?.instagram || 0;
+                    document.getElementById('meta-breakdown-text').innerText = `FB: ${fb} | IG: ${ig}`;
+                }
+            } catch (e) {
+                console.error('Failed to load Meta Dashboard metrics:', e);
+            }
+        }
+
+        async function simulateMetaWebhook() {
+            const pageId = document.getElementById('meta-page-id').value || "10484552938192";
+            const formId = document.getElementById('meta-form-id').value || "849204859203";
+            const randomId = "sim_" + Math.floor(Math.random() * 1000000000);
+
+            const simName = prompt("Enter Simulated Lead Name:", "Simulated Jane Doe") || "Simulated Jane Doe";
+            const simEmail = prompt("Enter Simulated Lead Email:", "simulated.jane@example.com") || "simulated.jane@example.com";
+            const simPhone = prompt("Enter Simulated Lead Phone:", "202-555-0199") || "202-555-0199";
+
+            const simPayload = {
+                object: "page",
+                entry: [
+                    {
+                        id: pageId,
+                        time: Math.floor(Date.now() / 1000),
+                        changes: [
+                            {
+                                field: "leadgen",
+                                value: {
+                                    leadgen_id: randomId,
+                                    page_id: pageId,
+                                    form_id: formId,
+                                    platform: "fb",
+                                    adgroup_name: "Simulated Ad Set",
+                                    campaign_name: "Simulated Campaign"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                simulated_lead_name: simName,
+                simulated_email: simEmail,
+                simulated_phone: simPhone,
+                simulated_store_name: "Simulated Store",
+                simulated_city: "Atlanta",
+                simulated_campaign_name: "Simulated Campaign",
+                simulated_adset_name: "Simulated Ad Set",
+                simulated_platform: "Facebook Lead Ads"
+            };
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/integrations/meta/webhook`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Meta-Simulation': 'true'
+                    },
+                    body: JSON.stringify(simPayload)
+                });
+                const res = await resp.json();
+                if (resp.ok && res.success) {
+                    alert("✅ Simulated lead ingestion succeeded! Lead registered in database.");
+                    await loadMetaLogs();
+                    await loadMetaDashboard();
+                    if (typeof fetchLeads === 'function') {
+                        fetchLeads(1);
+                    }
+                } else {
+                    alert("❌ Simulation failed: " + (res.error || "Unknown error"));
+                }
+            } catch (err) {
+                console.error("Simulation error:", err);
+                alert("❌ Simulation endpoint connection failure.");
+            }
+        }
+
+        async function populateStaffForSettings() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/staff`, { credentials: 'include' });
+                const staff = await resp.json();
+                const select = document.getElementById('setting-assign-user');
+                select.innerHTML = '<option value="">Choose Agent</option>';
+                staff.forEach(s => {
+                    const name = `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.username;
+                    select.innerHTML += `<option value="${s.id}">${name} (${s.role})</option>`;
+                });
+            } catch (e) {
+                console.error('Error fetching staff for settings:', e);
+            }
+        }
+
+        function toggleAssignModeFields() {
+            const mode = document.getElementById('setting-assign-mode').value;
+            const container = document.getElementById('setting-assign-user-container');
+            if (mode === 'single_user') {
+                container.style.display = 'block';
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        async function loadCrmSettings() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/crm-settings`, { credentials: 'include' });
+                const res = await resp.json();
+                if (res.success && res.settings) {
+                    const settings = res.settings;
+                    if (settings.lead_assignment_mode) {
+                        document.getElementById('setting-assign-mode').value = settings.lead_assignment_mode;
+                    }
+                    toggleAssignModeFields();
+                    if (settings.lead_assignment_user) {
+                        document.getElementById('setting-assign-user').value = settings.lead_assignment_user;
+                    }
+                    if (settings.lead_notification_emails) {
+                        document.getElementById('setting-notify-emails').value = settings.lead_notification_emails;
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load CRM settings:', e);
+            }
+        }
+
+        async function saveCrmSettings(e) {
+            e.preventDefault();
+            const payload = {
+                lead_assignment_mode: document.getElementById('setting-assign-mode').value,
+                lead_assignment_user: document.getElementById('setting-assign-user').value,
+                lead_notification_emails: document.getElementById('setting-notify-emails').value
+            };
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/crm-settings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    alert('✅ CRM Settings saved successfully!');
+                } else {
+                    alert('❌ Failed to save settings: ' + res.error);
+                }
+            } catch (err) {
+                console.error('Save settings error:', err);
+                alert('❌ Connection failure saving settings.');
+            }
+        }
+
+        async function loadApiKeys() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/lead-api-keys`, { credentials: 'include' });
+                const res = await resp.json();
+                const tbody = document.getElementById('api-keys-table-body');
+                if (res.success && res.keys && res.keys.length > 0) {
+                    tbody.innerHTML = res.keys.map(k => {
+                        const statusBadge = k.active === 1 
+                            ? '<span style="background: rgba(16, 185, 129, 0.15); color: #34D399; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">ACTIVE</span>'
+                            : '<span style="background: rgba(239, 68, 68, 0.15); color: #F87171; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">INACTIVE</span>';
+                        
+                        const lastUsed = k.last_used_at 
+                            ? new Date(k.last_used_at).toLocaleString()
+                            : '<span style="opacity: 0.5;">Never</span>';
+
+                        const copyPrefix = k.api_key ? k.api_key.substring(0, 12) + '...' : '';
+
+                        return `
+                            <tr>
+                                <td style="padding: 0.75rem 0.5rem; font-weight: 700; color: #fff;">${k.key_name}</td>
+                                <td style="padding: 0.75rem 0.5rem; font-family: monospace; font-size: 0.8rem; color: #a78bfa;">${copyPrefix}</td>
+                                <td style="padding: 0.75rem 0.5rem; text-align: center;">${statusBadge}</td>
+                                <td style="padding: 0.75rem 0.5rem; font-size: 0.8rem;">${lastUsed}</td>
+                                <td style="padding: 0.75rem 0.5rem; text-align: right; display: flex; gap: 0.4rem; justify-content: flex-end;">
+                                    <button class="btn-admin" onclick="toggleApiKey(${k.id})" style="padding: 4px 8px; font-size: 0.7rem; font-weight: 700;">🔄 Toggle</button>
+                                    <button class="btn-admin" onclick="deleteApiKey(${k.id})" style="padding: 4px 8px; font-size: 0.7rem; font-weight: 700; color: #EF4444; border-color: rgba(239,68,68,0.2);">🗑️ Del</button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem; opacity:0.5; font-size:0.85rem;">No API Keys configured.</td></tr>`;
+                }
+            } catch (e) {
+                console.error('Failed to load api keys:', e);
+            }
+        }
+
+        function openCreateKeyModal() {
+            document.getElementById('nk-key-name').value = '';
+            document.getElementById('create-key-modal').style.display = 'flex';
+        }
+
+        async function submitCreateApiKey(e) {
+            e.preventDefault();
+            const name = document.getElementById('nk-key-name').value;
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/lead-api-keys`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key_name: name }),
+                    credentials: 'include'
+                });
+                const res = await resp.json();
+                if (res.success && res.key) {
+                    closeModal('create-key-modal');
+                    document.getElementById('reveal-api-key').value = res.key.api_key;
+                    document.getElementById('reveal-api-secret').value = res.key.api_secret;
+                    document.getElementById('reveal-key-modal').style.display = 'flex';
+                    await loadApiKeys();
+                } else {
+                    alert('Error creating API key: ' + res.error);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Connection failure generating API key.');
+            }
+        }
+
+        async function toggleApiKey(id) {
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/lead-api-keys/${id}/toggle`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                if (resp.ok) await loadApiKeys();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function deleteApiKey(id) {
+            if (!confirm('Are you sure you want to permanently delete this API Key? Credentials using this key will fail immediately.')) return;
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/lead-api-keys/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    await loadApiKeys();
+                } else {
+                    alert('Delete failed: ' + res.error);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function loadAdminLeadSources() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/lead-sources`, { credentials: 'include' });
+                const res = await resp.json();
+                const tbody = document.getElementById('lead-sources-table-body');
+                if (res.success && res.sources && res.sources.length > 0) {
+                    tbody.innerHTML = res.sources.map(src => {
+                        const statusBadge = src.active === 1 
+                            ? '<span style="background: rgba(16, 185, 129, 0.15); color: #34D399; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">ACTIVE</span>'
+                            : '<span style="background: rgba(239, 68, 68, 0.15); color: #F87171; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">INACTIVE</span>';
+                        
+                        return `
+                            <tr>
+                                <td style="padding: 0.6rem 0.5rem; font-weight: 700; color: #fff;">${src.source_name}</td>
+                                <td style="padding: 0.6rem 0.5rem; font-size: 0.8rem; text-transform: uppercase;">${src.source_type}</td>
+                                <td style="padding: 0.6rem 0.5rem; text-align: center;">${statusBadge}</td>
+                                <td style="padding: 0.6rem 0.5rem; text-align: right; display: flex; gap: 0.4rem; justify-content: flex-end;">
+                                    <button class="btn-admin" onclick="toggleLeadSource(${src.id})" style="padding: 4px 8px; font-size: 0.7rem; font-weight: 700;">🔄 Toggle</button>
+                                    <button class="btn-admin" onclick="deleteLeadSource(${src.id})" style="padding: 4px 8px; font-size: 0.7rem; font-weight: 700; color: #EF4444; border-color: rgba(239,68,68,0.2);">🗑️ Del</button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:2rem; opacity:0.5; font-size:0.85rem;">No Lead Sources configured.</td></tr>`;
+                }
+            } catch (e) {
+                console.error('Failed to load lead sources:', e);
+            }
+        }
+
+        function openAddSourceModal() {
+            document.getElementById('ns-source-name').value = '';
+            document.getElementById('ns-source-type').value = 'meta';
+            document.getElementById('add-source-modal').style.display = 'flex';
+        }
+
+        async function submitCreateLeadSource(e) {
+            e.preventDefault();
+            const payload = {
+                source_name: document.getElementById('ns-source-name').value,
+                source_type: document.getElementById('ns-source-type').value
+            };
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/lead-sources`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    closeModal('add-source-modal');
+                    await loadAdminLeadSources();
+                    if (typeof fetchLeadSources === 'function') {
+                        fetchLeadSources();
+                    }
+                } else {
+                    alert('Error creating lead source: ' + res.error);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Connection failure generating lead source.');
+            }
+        }
+
+        async function toggleLeadSource(id) {
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/lead-sources/${id}/toggle`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                if (resp.ok) {
+                    await loadAdminLeadSources();
+                    if (typeof fetchLeadSources === 'function') fetchLeadSources();
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function deleteLeadSource(id) {
+            if (!confirm('Are you sure you want to permanently delete this lead source? Leads using this source will remain in the database.')) return;
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/lead-sources/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    await loadAdminLeadSources();
+                    if (typeof fetchLeadSources === 'function') fetchLeadSources();
+                } else {
+                    alert('Delete failed: ' + res.error);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const input = document.getElementById(elementId);
+            input.select();
+            input.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(input.value);
+            alert('Copied to clipboard!');
+        }
+
+        function resetLeadFilters() {
+            document.getElementById('fl-search').value = '';
+            document.getElementById('fl-source').value = '';
+            document.getElementById('fl-status').value = '';
+            document.getElementById('fl-assigned').value = '';
+            document.getElementById('fl-state').value = '';
+            fetchLeads(1);
         }
 
         checkAuth().then(() => { fetchStats(); fetchUsers(); });

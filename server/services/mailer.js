@@ -207,6 +207,90 @@ const mailer = {
         } catch (err) {
             console.error('❌ Failed to send failure notification:', err);
         }
+    },
+
+    /**
+     * Sends an alert email when a new lead is received and/or assigned
+     */
+    async sendLeadNotificationEmail(lead, assigneeEmail, managerEmails = []) {
+        try {
+            const recipients = [];
+            if (assigneeEmail) recipients.push(assigneeEmail);
+            if (managerEmails && managerEmails.length > 0) {
+                recipients.push(...managerEmails);
+            }
+
+            if (recipients.length === 0) return;
+
+            const mailOptions = {
+                from: '"LAI CRM System" <yashdhattarwal@gmail.com>',
+                to: recipients.join(', '),
+                subject: `🎯 New Lead Alert: ${lead.lead_name} (${lead.source})`,
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
+                        <h2 style="color: #6D28D9; border-bottom: 2px solid #6D28D9; padding-bottom: 10px; margin-top: 0;">New Sales Lead Received</h2>
+                        
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                            <tr>
+                                <td style="padding: 8px 0; font-weight: bold; width: 35%; color: #555;">Lead Name:</td>
+                                <td style="padding: 8px 0; color: #111;">${lead.lead_name}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; font-weight: bold; color: #555;">Source:</td>
+                                <td style="padding: 8px 0; color: #6D28D9; font-weight: bold;">🔌 ${lead.source}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; font-weight: bold; color: #555;">Email:</td>
+                                <td style="padding: 8px 0; color: #111;"><a href="mailto:${lead.email}">${lead.email || 'N/A'}</a></td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; font-weight: bold; color: #555;">Phone:</td>
+                                <td style="padding: 8px 0; color: #111;">${lead.phone || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; font-weight: bold; color: #555;">Store/Business:</td>
+                                <td style="padding: 8px 0; color: #111;">${lead.store_name || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; font-weight: bold; color: #555;">Location:</td>
+                                <td style="padding: 8px 0; color: #111;">${lead.city || ''}${lead.state ? ', ' + lead.state : ''}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; font-weight: bold; color: #555;">POS System:</td>
+                                <td style="padding: 8px 0; color: #3B82F6; font-family: monospace;">${lead.pos_system || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; font-weight: bold; color: #555;">Campaign:</td>
+                                <td style="padding: 8px 0; color: #111;">${lead.campaign_name || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; font-weight: bold; color: #555;">Status:</td>
+                                <td style="padding: 8px 0; color: #111;"><span style="background: #E0E7FF; color: #4338CA; padding: 3px 8px; border-radius: 4px; font-size: 0.85em;">${lead.status || 'New'}</span></td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; font-weight: bold; color: #555;">Assigned To:</td>
+                                <td style="padding: 8px 0; color: #059669; font-weight: bold;">${lead.assigned_name || 'Unassigned'}</td>
+                            </tr>
+                        </table>
+
+                        <div style="margin-top: 20px; padding: 15px; background: #fff; border-left: 4px solid #6D28D9; border-radius: 4px;">
+                            <strong style="color: #555;">Lead Notes:</strong>
+                            <p style="margin: 5px 0 0 0; color: #333; line-height: 1.4; font-size: 0.9em;">${lead.notes || 'No notes provided.'}</p>
+                        </div>
+                        
+                        <p style="margin-top: 25px; font-size: 0.8em; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
+                            This is an automated notification from your LAI CRM Lead Management System.
+                        </p>
+                    </div>
+                `
+            };
+
+            const info = await transporter.sendMail(mailOptions);
+            console.log('✅ Lead Notification Email sent: %s', info.messageId);
+            return info;
+        } catch (err) {
+            console.error('❌ Lead Mailer Error:', err);
+        }
     }
 };
 

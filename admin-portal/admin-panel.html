@@ -7,6 +7,41 @@
     <link rel="stylesheet" href="./css/global.css">
     <link rel="stylesheet" href="./css/admin.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- CRITICAL UI FUNCTIONS: isolated script so buttons always work -->
+    <script>
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-pane').forEach(function(p) {
+                p.style.display = 'none';
+            });
+            var pane = document.getElementById('tab-' + tabId);
+            if (pane) pane.style.display = 'block';
+            document.querySelectorAll('.tab-btn').forEach(function(b) {
+                b.classList.remove('active');
+            });
+            if (btn) btn.classList.add('active');
+        }
+
+        function toggleSettingsDropdown(e) {
+            e.stopPropagation();
+            var dd = document.getElementById('settings-dropdown');
+            if (dd) dd.classList.toggle('show');
+        }
+
+        function toggleActionsDropdown(e, id) {
+            e.stopPropagation();
+            document.querySelectorAll('.dropdown-menu').forEach(function(m) {
+                if (m.id !== 'actions-dropdown-' + id) m.classList.remove('show');
+            });
+            var m = document.getElementById('actions-dropdown-' + id);
+            if (m) m.classList.toggle('show');
+        }
+
+        document.addEventListener('click', function() {
+            document.querySelectorAll('.dropdown-menu').forEach(function(m) {
+                m.classList.remove('show');
+            });
+        });
+    </script>
 </head>
 <body>
     <div class="loading-overlay" id="loading" style="display:none;">⟳ Loading...</div>

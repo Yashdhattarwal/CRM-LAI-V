@@ -78,9 +78,12 @@ const mssqlConfig = {
     }
 };
 
+const https = require('https');
+
 let mssqlPool = null;
 let mssqlConnectionError = null;
 let db;
+let outboundIp = 'Detecting...';
 
 function saveDb() {
   const data = db.export();
@@ -1262,7 +1265,8 @@ app.get('/api/diagnostics', async (req, res) => {
     mssqlConfigServer: mssqlConfig.server,
     mssqlError: mssqlConnectionError,
     mssqlPing: null,
-    renderEnv: renderEnv
+    renderEnv: renderEnv,
+    outboundIp: outboundIp
   };
 
   if (db) {
@@ -4174,6 +4178,23 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(FRONTEND, 'index.html'));
 });
 
+function fetchOutboundIp() {
+  https.get('https://api.ipify.org?format=json', (resp) => {
+    let data = '';
+    resp.on('data', (chunk) => { data += chunk; });
+    resp.on('end', () => {
+      try {
+        outboundIp = JSON.parse(data).ip;
+        console.log('[IP CHECK] Server outbound IP address:', outboundIp);
+      } catch (e) {
+        console.error('[IP CHECK ERROR] Failed to parse ipify response:', e);
+      }
+    });
+  }).on("error", (err) => {
+    console.error("[IP CHECK ERROR] HTTP request failed:", err.message);
+  });
+}
+
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 initLocalDb().then(() => {
   app.listen(PORT, () => {
@@ -4184,6 +4205,9 @@ initLocalDb().then(() => {
     console.log(`║  Admin Panel: http://localhost:${PORT}/admin-login.html ║`);
     console.log('╚══════════════════════════════════════════════════════╝');
     console.log('');
+
+    // Fetch outbound IP of server
+    fetchOutboundIp();
 
     // Trigger MS SQL connection and synchronization in the background!
     connectAndSyncMssql().catch(err => {

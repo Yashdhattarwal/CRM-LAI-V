@@ -1463,20 +1463,29 @@
         let currentUserId = null;
 
         async function checkAuth() {
-            const resp = await fetch(`${API_BASE}/api/admin/me`, { credentials: 'include' });
-            const data = await resp.json();
-            if (!data.loggedIn) return window.location.href = 'admin-login.html';
-            currentUserId = data.userId;
-            document.getElementById('display-fullname').textContent = data.name;
-            document.getElementById('display-username').textContent = data.username;
-            document.getElementById('display-email').textContent = data.email;
-            if (data.role === 'admin') {
-                const staffEl = document.getElementById('menu-staff-mgmt');
-                const delEl = document.getElementById('menu-del-hist');
-                if (staffEl) staffEl.style.display = 'block';
-                if (delEl) delEl.style.display = 'block';
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/me`, { credentials: 'include' });
+                if (!resp.ok) throw new Error(`HTTP error ${resp.status}`);
+                const data = await resp.json();
+                if (!data.loggedIn) {
+                    window.location.href = 'admin-login.html';
+                    return;
+                }
+                currentUserId = data.userId;
+                document.getElementById('display-fullname').textContent = data.name || '';
+                document.getElementById('display-username').textContent = data.username || '';
+                document.getElementById('display-email').textContent = data.email || '';
+                if (data.role === 'admin') {
+                    const staffEl = document.getElementById('menu-staff-mgmt');
+                    const delEl = document.getElementById('menu-del-hist');
+                    if (staffEl) staffEl.style.display = 'block';
+                    if (delEl) delEl.style.display = 'block';
+                }
+                document.body.setAttribute('data-role', data.role);
+            } catch (err) {
+                console.error('[AUTH CHECK FAILED]', err);
+                window.location.href = 'admin-login.html';
             }
-            document.body.setAttribute('data-role', data.role);
         }
         async function openEmpLogsModal() {
             document.getElementById('emp-logs-modal').style.display = 'flex';
@@ -3582,7 +3591,17 @@
             fetchLeads(1);
         }
 
-        checkAuth().then(() => { fetchStats(); fetchUsers(); });
+        checkAuth()
+            .then(() => { 
+                console.log('Authentication passed. Loading stats and user data...');
+                fetchStats(); 
+                fetchUsers(); 
+            })
+            .catch(err => {
+                console.error('Failed to initialize admin dashboard:', err);
+                fetchStats();
+                fetchUsers();
+            });
     </script>
 </body>
 </html>

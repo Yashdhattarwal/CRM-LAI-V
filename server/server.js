@@ -1256,6 +1256,7 @@ app.get('/api/diagnostics', async (req, res) => {
     try {
       diag.sqliteStats.users = (dbGet('SELECT COUNT(*) as c FROM users') || {}).c || 0;
       diag.sqliteStats.registrations = (dbGet('SELECT COUNT(*) as c FROM registrations') || {}).c || 0;
+      diag.sqliteStats.registrations_cols = dbAll("PRAGMA table_info(registrations)").map(c => c.name);
       diag.sqliteStats.leads = (dbGet('SELECT COUNT(*) as c FROM leads') || {}).c || 0;
       diag.sqliteStats.lead_sources = (dbGet('SELECT COUNT(*) as c FROM lead_sources') || {}).c || 0;
     } catch (e) {

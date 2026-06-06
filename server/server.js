@@ -1249,6 +1249,20 @@ function dbRun(sqlStr, params = []) {
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
+// POST /api/admin/force-sync  – manually re-trigger MS SQL → SQLite sync
+app.post('/api/admin/force-sync', adminOnly, async (req, res) => {
+  if (!mssqlPool) {
+    return res.status(503).json({ error: 'MS SQL not connected. Check diagnostics.' });
+  }
+  try {
+    res.json({ message: 'Sync started in background. Check /api/diagnostics in ~30s.' });
+    await connectAndSyncMssql();
+    console.log('[FORCE SYNC] Completed successfully.');
+  } catch (err) {
+    console.error('[FORCE SYNC ERROR]', err.message);
+  }
+});
+
 app.get('/api/diagnostics', async (req, res) => {
   const renderEnv = {};
   for (const k in process.env) {

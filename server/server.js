@@ -1247,6 +1247,13 @@ function dbRun(sqlStr, params = []) {
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 app.get('/api/diagnostics', async (req, res) => {
+  const renderEnv = {};
+  for (const k in process.env) {
+    if (k.startsWith('RENDER_')) {
+      renderEnv[k] = process.env[k];
+    }
+  }
+
   const diag = {
     timestamp: new Date().toISOString(),
     sqliteConnected: !!db,
@@ -1254,7 +1261,8 @@ app.get('/api/diagnostics', async (req, res) => {
     mssqlConnected: !!mssqlPool,
     mssqlConfigServer: mssqlConfig.server,
     mssqlError: mssqlConnectionError,
-    mssqlPing: null
+    mssqlPing: null,
+    renderEnv: renderEnv
   };
 
   if (db) {

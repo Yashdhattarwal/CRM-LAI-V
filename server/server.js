@@ -77,6 +77,7 @@ const mssqlConfig = {
 };
 
 let mssqlPool = null;
+let mssqlConnectionError = null;
 let db;
 
 function saveDb() {
@@ -1146,11 +1147,13 @@ async function connectAndSyncMssql() {
     console.log('🔌 Connecting to MS SQL Server (52.186.36.241:1438)...');
     mssqlPool = await sql.connect(mssqlConfig);
     console.log('✅ Connected to cloud MS SQL Server!');
+    mssqlConnectionError = null;
     
     // Create MS SQL tables if they do not exist
     await createMssqlTables();
   } catch (err) {
     console.error('❌ Failed to connect to cloud MS SQL Server:', err.message);
+    mssqlConnectionError = err.message;
     return;
   }
 
@@ -1248,7 +1251,7 @@ app.get('/api/diagnostics', async (req, res) => {
     sqliteStats: {},
     mssqlConnected: !!mssqlPool,
     mssqlConfigServer: mssqlConfig.server,
-    mssqlError: null,
+    mssqlError: mssqlConnectionError,
     mssqlPing: null
   };
 

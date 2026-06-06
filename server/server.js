@@ -363,14 +363,14 @@ async function createMssqlTables() {
                     created_at DATETIME DEFAULT GETDATE()
                 )`
     ];
-
-    for (const q of schemas) {
-        await mssqlPool.request().query(q).catch(e => {
+    await Promise.all(schemas.map(q => 
+        mssqlPool.request().query(q).catch(e => {
             console.error('[MSSQL SCHEMA ERROR]', e.message);
-        });
-    }
+        })
+    ));
 
     // Dynamic state tables
+    const stateQueries = [];
     for (const st of STATES) {
         const stateRegSchema = `
             IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[registrations_${st}]') AND type in (N'U'))
@@ -421,9 +421,10 @@ async function createMssqlTables() {
                 PackPos_length INT NOT NULL
             )
         `;
-        await mssqlPool.request().query(stateRegSchema).catch(e => {});
-        await mssqlPool.request().query(stateTicketSchema).catch(e => {});
+        stateQueries.push(mssqlPool.request().query(stateRegSchema).catch(e => {}));
+        stateQueries.push(mssqlPool.request().query(stateTicketSchema).catch(e => {}));
     }
+    await Promise.all(stateQueries);
 }
 
 async function syncLegacyCsharpData() {
@@ -662,19 +663,7 @@ async function syncLegacyCsharpData() {
     }
 }
 
-async function initDb() {
-  // Connect to MS SQL Server
-  try {
-    console.log('🔌 Connecting to MS SQL Server (52.186.36.241:1438)...');
-    mssqlPool = await sql.connect(mssqlConfig);
-    console.log('✅ Connected to cloud MS SQL Server!');
-    
-    // Create MS SQL tables if they do not exist
-    await createMssqlTables();
-  } catch (err) {
-    console.error('❌ Failed to connect to cloud MS SQL Server:', err.message);
-  }
-
+async function initLocalDb() {
   const SQL = await initSqlJs();
 
   if (fs.existsSync(DB_PATH)) {
@@ -1136,54 +1125,71 @@ async function initDb() {
         }
     }
 
-    // Sync all data from MS SQL into local SQLite!
-    if (mssqlPool) {
-        console.log('🔄 Synchronizing data from MS SQL to local SQLite...');
-        const tablesToSync = [
-            'users', 'registrations', 'support_logs', 'audit_logs', 
-            'purchase_history', 'deleted_registrations', 'RTNTicketConfig', 
-            'attendance', 'user_status_logs', 'customer_status_logs',
-            'leads', 'lead_activities', 'lead_sources', 'lead_api_keys', 'crm_settings'
-        ];
-        
-        STATES.forEach(st => {
-            tablesToSync.push(`registrations_${st}`);
-            tablesToSync.push(`RTNTicketConfig_${st}`);
-        });
+}
 
-        for (const table of tablesToSync) {
-            try {
-                const result = await mssqlPool.request().query(`SELECT * FROM ${table}`);
-                if (result.recordset && result.recordset.length > 0) {
-                    console.log(`[MSSQL SYNC] Pulling ${result.recordset.length} rows for table ${table}...`);
-                    result.recordset.forEach(row => {
-                        try {
-                            const keys = Object.keys(row);
-                            const placeholders = keys.map(() => '?').join(',');
-                            const values = keys.map(k => {
-                                if (row[k] instanceof Date) {
-                                    return row[k].toISOString().replace('T', ' ').substring(0, 19);
-                                }
-                                return row[k];
-                            });
-                            db.run(`INSERT OR REPLACE INTO ${table} (${keys.join(',')}) VALUES (${placeholders})`, values);
-                        } catch (err) {
-                            console.warn(`[MSSQL SYNC WARNING] Failed row in ${table}:`, err.message);
-                        }
-                    });
-                }
-            } catch (e) {
-                // Table might not exist or be empty
+async function connectAndSyncMssql() {
+  try {
+    console.log('🔌 Connecting to MS SQL Server (52.186.36.241:1438)...');
+    mssqlPool = await sql.connect(mssqlConfig);
+    console.log('✅ Connected to cloud MS SQL Server!');
+    
+    // Create MS SQL tables if they do not exist
+    await createMssqlTables();
+  } catch (err) {
+    console.error('❌ Failed to connect to cloud MS SQL Server:', err.message);
+    return;
+  }
+
+  // Sync all data from MS SQL into local SQLite!
+  if (mssqlPool) {
+    console.log('🔄 Synchronizing data from MS SQL to local SQLite...');
+    const tablesToSync = [
+        'users', 'registrations', 'support_logs', 'audit_logs', 
+        'purchase_history', 'deleted_registrations', 'RTNTicketConfig', 
+        'attendance', 'user_status_logs', 'customer_status_logs',
+        'leads', 'lead_activities', 'lead_sources', 'lead_api_keys', 'crm_settings'
+    ];
+    
+    STATES.forEach(st => {
+        tablesToSync.push(`registrations_${st}`);
+        tablesToSync.push(`RTNTicketConfig_${st}`);
+    });
+
+    const syncPromises = tablesToSync.map(async (table) => {
+        try {
+            const result = await mssqlPool.request().query(`SELECT * FROM ${table}`);
+            if (result.recordset && result.recordset.length > 0) {
+                console.log(`[MSSQL SYNC] Pulling ${result.recordset.length} rows for table ${table}...`);
+                result.recordset.forEach(row => {
+                    try {
+                        const keys = Object.keys(row);
+                        const placeholders = keys.map(() => '?').join(',');
+                        const values = keys.map(k => {
+                            if (row[k] instanceof Date) {
+                                return row[k].toISOString().replace('T', ' ').substring(0, 19);
+                            }
+                            return row[k];
+                        });
+                        db.run(`INSERT OR REPLACE INTO ${table} (${keys.join(',')}) VALUES (${placeholders})`, values);
+                    } catch (err) {
+                        console.warn(`[MSSQL SYNC WARNING] Failed row in ${table}:`, err.message);
+                    }
+                });
             }
+        } catch (e) {
+            // Table might not exist or be empty
         }
-        console.log('✅ MS SQL to local SQLite synchronization complete!');
-        saveDb(); // Explicitly write the loaded data to disk!
+    });
 
-        // Trigger background sync of legacy C# table records (users & shops)
-        setTimeout(() => {
-            syncLegacyCsharpData().catch(e => console.error('[LEGACY SYNC ERROR]', e));
-        }, 1000);
-    }
+    await Promise.all(syncPromises);
+    console.log('✅ MS SQL to local SQLite synchronization complete!');
+    saveDb(); // Explicitly write the loaded data to disk!
+
+    // Trigger background sync of legacy C# table records (users & shops)
+    setTimeout(() => {
+        syncLegacyCsharpData().catch(e => console.error('[LEGACY SYNC ERROR]', e));
+    }, 1000);
+  }
 }
 
 // ─── DB query helpers ─────────────────────────────────────────────────────────
@@ -4104,7 +4110,7 @@ app.get('*', (req, res) => {
 });
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
-initDb().then(() => {
+initLocalDb().then(() => {
   app.listen(PORT, () => {
     console.log('');
     console.log('╔══════════════════════════════════════════════════════╗');
@@ -4113,8 +4119,13 @@ initDb().then(() => {
     console.log(`║  Admin Panel: http://localhost:${PORT}/admin-login.html ║`);
     console.log('╚══════════════════════════════════════════════════════╝');
     console.log('');
+
+    // Trigger MS SQL connection and synchronization in the background!
+    connectAndSyncMssql().catch(err => {
+      console.error('⚠️ MS SQL connection/sync failed in background:', err);
+    });
   });
 }).catch(err => {
-  console.error('💥 Failed to init DB:', err);
+  console.error('💥 Failed to init local DB:', err);
   process.exit(1);
 });

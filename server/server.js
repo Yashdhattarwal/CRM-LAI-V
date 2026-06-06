@@ -65,6 +65,8 @@ const mssqlConfig = {
     server: '52.186.36.241',
     port: 1438,
     database: 'RTNMaster_Dev',
+    connectionTimeout: 10000,
+    requestTimeout: 10000,
     options: {
         encrypt: true,
         trustServerCertificate: true

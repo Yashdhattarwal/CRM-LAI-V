@@ -1969,7 +1969,7 @@ function adminOnly(req, res, next) {
   res.status(403).json({ error: 'Unauthorized. Admin login required.' });
 }
 
-// POST /api/admin/login (DB-backed)
+// POST /api/admin/login (MS SQL primary → SQLite fallback)
 app.post('/api/admin/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -1977,15 +1977,38 @@ app.post('/api/admin/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required.' });
     }
 
-    const user = dbGet(
-      `SELECT * FROM users WHERE username = ? AND role IN ('admin', 'manager', 'employee') LIMIT 1`,
-      [username.trim()]
-    );
+    let user = null;
+
+    // ── 1. Try MS SQL (always live data) ─────────────────────────────────────
+    if (mssqlPool) {
+      try {
+        const r = await mssqlPool.request()
+          .input('uname', username.trim())
+          .query(`SELECT TOP 1 id, username, email, first_name, last_name, role, is_active, password_hash
+                  FROM users
+                  WHERE username = @uname
+                    AND role IN ('admin','manager','employee')`);
+        if (r.recordset && r.recordset.length > 0) {
+          user = r.recordset[0];
+          console.log(`[LOGIN] Authenticated via MS SQL: ${user.username}`);
+        }
+      } catch (msErr) {
+        console.warn('[LOGIN] MS SQL lookup failed, falling back to SQLite:', msErr.message);
+      }
+    }
+
+    // ── 2. Fallback: SQLite cache ─────────────────────────────────────────────
+    if (!user) {
+      user = dbGet(
+        `SELECT * FROM users WHERE username = ? AND role IN ('admin','manager','employee') LIMIT 1`,
+        [username.trim()]
+      );
+      if (user) console.log(`[LOGIN] Authenticated via SQLite (fallback): ${user.username}`);
+    }
 
     if (!user) {
       return res.status(401).json({ error: 'No administrative account found.' });
     }
-
     if (user.is_active === 0) {
       return res.status(403).json({ error: 'Your staff account is inactive. Access denied.' });
     }
@@ -2227,83 +2250,132 @@ app.post('/api/admin/registrations', adminOnly, async (req, res) => {
   }
 });
 
-// GET /api/admin/registrations
-app.get('/api/admin/registrations', adminOnly, (req, res) => {
-  const { 
+// GET /api/admin/registrations  (MS SQL primary → SQLite fallback)
+app.get('/api/admin/registrations', adminOnly, async (req, res) => {
+  const {
     state, firstName, lastName, shopCity, shopState, corporation,
-    userName, shopEmail, userEmail, phone, shopId, product, plan, status 
+    userName, shopEmail, userEmail, phone, shopId, product, plan, status
   } = req.query;
 
-  const table = (state && STATES.includes(state.toUpperCase())) ? `registrations_${state.toUpperCase()}` : `registrations`;
-  console.log(`[ADMIN QUERY] Fetching from ${table} with filters`);
+  // ── MS SQL direct query (SQL Server syntax) ──────────────────────────────
+  if (mssqlPool) {
+    try {
+      const table = (state && STATES.includes(state.toUpperCase()))
+        ? `registrations_${state.toUpperCase()}` : `registrations`;
 
-  let sql = `
-    SELECT r.id as id, r.id as reg_id, r.shop_id, u.id as user_id, u.username, u.email as user_email, 
-           COALESCE(u.passcode, r.passcode) as passcode,
-           r.first_name, r.last_name, r.email as reg_email, r.store_name, r.corporation as legal_name,
-           r.product, r.plan, r.status, r.submitted_at, r.address, r.city, r.state, r.zipcode, 
-           r.mobile as phone, r.payment_mode, r.bank_name, r.routing_no, r.account_no, 
-           r.account_type, r.account_name, r.card_no,
-           r.is_active,
-           COALESCE(NULLIF(r.expiry_date, ''), 
-             CASE 
-               WHEN r.plan LIKE '%Trial%' THEN date(r.submitted_at, '+30 days')
-               WHEN r.plan = 'Monthly' THEN date(r.submitted_at, '+1 month')
-               WHEN r.plan = '1 Year'  THEN date(r.submitted_at, '+1 year')
-               WHEN r.plan = '2 Years' THEN date(r.submitted_at, '+2 years')
-               WHEN r.plan = '3 Years' THEN date(r.submitted_at, '+3 years')
-               ELSE date(r.submitted_at, '+1 year')
-             END
-           ) as expiry_date,
-           CASE 
-             WHEN date('now') <= (
-               COALESCE(NULLIF(r.expiry_date, ''),
-                 CASE 
-                   WHEN r.plan LIKE '%Trial%' THEN date(r.submitted_at, '+30 days')
-                   WHEN r.plan = 'Monthly' THEN date(r.submitted_at, '+1 month')
-                   WHEN r.plan = '1 Year'  THEN date(r.submitted_at, '+1 year')
-                   WHEN r.plan = '2 Years' THEN date(r.submitted_at, '+2 years')
-                   WHEN r.plan = '3 Years' THEN date(r.submitted_at, '+3 years')
-                   ELSE date(r.submitted_at, '+1 year')
-                 END
-               )
-             ) THEN 'Active'
-             ELSE 'Inactive'
-           END as computed_status
-    FROM ${table} r
-    LEFT JOIN users u ON r.user_id = u.id
-    WHERE 1=1
+      const req2 = mssqlPool.request();
+      let whereClauses = ['1=1'];
+      let pi = 0;
+
+      const addFilter = (col, val) => {
+        req2.input(`p${pi}`, `%${val}%`);
+        whereClauses.push(`${col} LIKE @p${pi}`);
+        pi++;
+      };
+
+      if (firstName)   addFilter('r.first_name', firstName);
+      if (lastName)    addFilter('r.last_name', lastName);
+      if (shopCity)    addFilter('r.city', shopCity);
+      if (shopState)   addFilter('r.state', shopState);
+      if (userName)    addFilter('u.username', userName);
+      if (shopEmail)   addFilter('r.email', shopEmail);
+      if (userEmail)   addFilter('u.email', userEmail);
+      if (corporation) addFilter('r.corporation', corporation);
+      if (phone)       addFilter('r.mobile', phone);
+      if (shopId)      addFilter('r.shop_id', shopId);
+      if (product)     addFilter('r.product', product);
+      if (plan)        addFilter('r.plan', plan);
+
+      if (status === 'Active') {
+        whereClauses.push(`r.is_active = 1 AND r.expiry_date IS NOT NULL AND r.expiry_date != '' AND CONVERT(date, r.expiry_date) >= CONVERT(date, GETDATE())`);
+      } else if (status === 'Inactive') {
+        whereClauses.push(`(r.is_active = 0 OR r.expiry_date IS NULL OR r.expiry_date = '' OR CONVERT(date, r.expiry_date) < CONVERT(date, GETDATE()))`);
+      }
+
+      const where = whereClauses.join(' AND ');
+      const sqlStr = `
+        SELECT
+          r.id, r.id AS reg_id, r.shop_id,
+          u.id AS user_id, u.username, u.email AS user_email,
+          COALESCE(u.passcode, r.passcode) AS passcode,
+          r.first_name, r.last_name, r.email AS reg_email,
+          r.store_name, r.corporation AS legal_name,
+          r.product, r.plan, r.status, r.submitted_at,
+          r.address, r.city, r.state, r.zipcode,
+          r.mobile AS phone, r.payment_mode,
+          r.bank_name, r.routing_no, r.account_no,
+          r.account_type, r.account_name, r.card_no, r.is_active,
+          COALESCE(NULLIF(r.expiry_date, ''),
+            CASE
+              WHEN r.plan LIKE '%Trial%' THEN CONVERT(varchar, DATEADD(day,  30, r.submitted_at), 23)
+              WHEN r.plan = 'Monthly'   THEN CONVERT(varchar, DATEADD(month,  1, r.submitted_at), 23)
+              WHEN r.plan = '1 Year'    THEN CONVERT(varchar, DATEADD(year,   1, r.submitted_at), 23)
+              WHEN r.plan = '2 Years'   THEN CONVERT(varchar, DATEADD(year,   2, r.submitted_at), 23)
+              WHEN r.plan = '3 Years'   THEN CONVERT(varchar, DATEADD(year,   3, r.submitted_at), 23)
+              ELSE CONVERT(varchar, DATEADD(year, 1, r.submitted_at), 23)
+            END
+          ) AS expiry_date,
+          CASE
+            WHEN GETDATE() <= CONVERT(datetime, COALESCE(NULLIF(r.expiry_date,''),
+              CASE
+                WHEN r.plan LIKE '%Trial%' THEN CONVERT(varchar, DATEADD(day,  30, r.submitted_at), 23)
+                WHEN r.plan = 'Monthly'   THEN CONVERT(varchar, DATEADD(month,  1, r.submitted_at), 23)
+                WHEN r.plan = '1 Year'    THEN CONVERT(varchar, DATEADD(year,   1, r.submitted_at), 23)
+                WHEN r.plan = '2 Years'   THEN CONVERT(varchar, DATEADD(year,   2, r.submitted_at), 23)
+                WHEN r.plan = '3 Years'   THEN CONVERT(varchar, DATEADD(year,   3, r.submitted_at), 23)
+                ELSE CONVERT(varchar, DATEADD(year, 1, r.submitted_at), 23)
+              END
+            )) THEN 'Active' ELSE 'Inactive'
+          END AS computed_status
+        FROM ${table} r
+        LEFT JOIN users u ON r.user_id = u.id
+        WHERE ${where}
+        ORDER BY r.submitted_at DESC
+      `;
+
+      const result = await req2.query(sqlStr);
+      return res.json(result.recordset || []);
+
+    } catch (msErr) {
+      console.error('[REGISTRATIONS] MS SQL query failed, falling back to SQLite:', msErr.message);
+    }
+  }
+
+  // ── SQLite fallback (original query) ────────────────────────────────────
+  const table = (state && STATES.includes(state.toUpperCase()))
+    ? `registrations_${state.toUpperCase()}` : `registrations`;
+  let sqlStr = `
+    SELECT r.id, r.id AS reg_id, r.shop_id, u.id AS user_id, u.username, u.email AS user_email,
+           COALESCE(u.passcode, r.passcode) AS passcode,
+           r.first_name, r.last_name, r.email AS reg_email, r.store_name, r.corporation AS legal_name,
+           r.product, r.plan, r.status, r.submitted_at, r.address, r.city, r.state, r.zipcode,
+           r.mobile AS phone, r.payment_mode, r.bank_name, r.routing_no, r.account_no,
+           r.account_type, r.account_name, r.card_no, r.is_active, r.expiry_date
+    FROM ${table} r LEFT JOIN users u ON r.user_id = u.id WHERE 1=1
   `;
   const params = [];
+  if (firstName)   { sqlStr += ` AND r.first_name LIKE ?`; params.push(`%${firstName}%`); }
+  if (lastName)    { sqlStr += ` AND r.last_name LIKE ?`;  params.push(`%${lastName}%`); }
+  if (shopCity)    { sqlStr += ` AND r.city LIKE ?`;       params.push(`%${shopCity}%`); }
+  if (shopState)   { sqlStr += ` AND r.state LIKE ?`;      params.push(`%${shopState}%`); }
+  if (userName)    { sqlStr += ` AND u.username LIKE ?`;   params.push(`%${userName}%`); }
+  if (shopEmail)   { sqlStr += ` AND r.email LIKE ?`;      params.push(`%${shopEmail}%`); }
+  if (userEmail)   { sqlStr += ` AND u.email LIKE ?`;      params.push(`%${userEmail}%`); }
+  if (corporation) { sqlStr += ` AND r.corporation LIKE ?`; params.push(`%${corporation}%`); }
+  if (phone)       { sqlStr += ` AND r.mobile LIKE ?`;     params.push(`%${phone}%`); }
+  if (shopId)      { sqlStr += ` AND r.shop_id LIKE ?`;    params.push(`%${shopId}%`); }
+  if (product)     { sqlStr += ` AND r.product LIKE ?`;    params.push(`%${product}%`); }
+  if (plan)        { sqlStr += ` AND r.plan LIKE ?`;       params.push(`%${plan}%`); }
+  sqlStr += ` ORDER BY r.submitted_at DESC`;
 
-  if (firstName) { sql += ` AND r.first_name LIKE ?`; params.push(`%${firstName}%`); }
-  if (lastName)  { sql += ` AND r.last_name LIKE ?`;  params.push(`%${lastName}%`); }
-  if (shopCity)  { sql += ` AND r.city LIKE ?`;       params.push(`%${shopCity}%`); }
-  if (shopState) { sql += ` AND r.state LIKE ?`;      params.push(`%${shopState}%`); }
-  if (userName)  { sql += ` AND u.username LIKE ?`;   params.push(`%${userName}%`); }
-  if (shopEmail) { sql += ` AND r.email LIKE ?`;      params.push(`%${shopEmail}%`); }
-  if (userEmail) { sql += ` AND u.email LIKE ?`;      params.push(`%${userEmail}%`); }
-  if (corporation) { sql += ` AND r.corporation LIKE ?`; params.push(`%${corporation}%`); }
-  if (phone)     { sql += ` AND r.mobile LIKE ?`;     params.push(`%${phone}%`); }
-  if (shopId)    { sql += ` AND r.shop_id LIKE ?`;    params.push(`%${shopId}%`); }
-  if (product)   { sql += ` AND r.product LIKE ?`;    params.push(`%${product}%`); }
-  if (plan)      { sql += ` AND r.plan LIKE ?`;       params.push(`%${plan}%`); }
-
-  if (status === 'Active') {
-    sql += ` AND r.is_active = 1 AND (r.expiry_date IS NOT NULL AND r.expiry_date != '' AND DATE(r.expiry_date) >= DATE('now'))`;
-  } else if (status === 'Inactive') {
-    sql += ` AND (r.is_active = 0 OR r.expiry_date IS NULL OR r.expiry_date = '' OR DATE(r.expiry_date) < DATE('now'))`;
-  }
-
-  sql += ` ORDER BY r.submitted_at DESC`;
   try {
-    const users = dbAll(sql, params);
-    res.json(users); // Return flat array as expected by frontend
+    return res.json(dbAll(sqlStr, params));
   } catch (err) {
-    console.error('[ADMIN USERS ERROR]', err);
-    res.status(500).json({ error: 'Failed to fetch registrations' });
+    console.error('[ADMIN REGISTRATIONS ERROR]', err);
+    res.status(500).json({ error: 'Failed to fetch registrations', detail: err.message });
   }
 });
+
 
 // ─── Staff Management (Admin/Manager/Employee) ───────────────────────────────────────────
 app.get('/api/admin/staff', adminOnly, (req, res) => {
@@ -2397,25 +2469,32 @@ app.patch('/api/admin/users/:id', adminOnly, (req, res) => {
 });
 
 
-// GET /api/admin/stats
-app.get('/api/admin/stats', adminOnly, (req, res) => {
+// GET /api/admin/stats  (MS SQL primary → SQLite fallback)
+app.get('/api/admin/stats', adminOnly, async (req, res) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Use COALESCE or simple checks to avoid crashes if expiry_date is null
-    const total      = (dbGet('SELECT COUNT(*) as c FROM registrations') || {}).c || 0;
-    const active     = (dbGet(`SELECT COUNT(*) as c FROM registrations WHERE expiry_date IS NOT NULL AND expiry_date != '' AND DATE(expiry_date) >= DATE(?)`, [today]) || {}).c || 0;
-    const inactive   = (dbGet(`SELECT COUNT(*) as c FROM registrations WHERE expiry_date IS NULL OR expiry_date = '' OR DATE(expiry_date) < DATE(?)`, [today]) || {}).c || 0;
-    const totalUsers = (dbGet('SELECT COUNT(*) as c FROM users') || {}).c || 0;
+    // ── MS SQL direct query ───────────────────────────────────────────────────
+    if (mssqlPool) {
+      const r = await mssqlPool.request().query(`
+        SELECT
+          COUNT(*) AS total,
+          SUM(CASE WHEN expiry_date IS NOT NULL AND expiry_date != '' AND CONVERT(date, expiry_date) >= CONVERT(date, GETDATE()) THEN 1 ELSE 0 END) AS active,
+          SUM(CASE WHEN expiry_date IS NULL OR expiry_date = '' OR CONVERT(date, expiry_date) < CONVERT(date, GETDATE()) THEN 1 ELSE 0 END) AS inactive
+        FROM registrations
+      `);
+      const row = r.recordset[0] || {};
+      return res.json({ total: row.total || 0, active: row.active || 0, inactive: row.inactive || 0 });
+    }
 
-    res.json({ 
-      total: total, 
-      active: active, 
-      inactive: inactive
-    });
+    // ── SQLite fallback ───────────────────────────────────────────────────────
+    const today = new Date().toISOString().split('T')[0];
+    const total    = (dbGet('SELECT COUNT(*) as c FROM registrations') || {}).c || 0;
+    const active   = (dbGet(`SELECT COUNT(*) as c FROM registrations WHERE expiry_date IS NOT NULL AND expiry_date != '' AND DATE(expiry_date) >= DATE(?)`, [today]) || {}).c || 0;
+    const inactive = (dbGet(`SELECT COUNT(*) as c FROM registrations WHERE expiry_date IS NULL OR expiry_date = '' OR DATE(expiry_date) < DATE(?)`, [today]) || {}).c || 0;
+    res.json({ total, active, inactive });
+
   } catch (err) {
     console.error('[ADMIN STATS ERROR]', err);
-    res.status(500).json({ error: 'Failed to fetch stats' });
+    res.status(500).json({ error: 'Failed to fetch stats', detail: err.message });
   }
 });
 

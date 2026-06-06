@@ -1542,35 +1542,57 @@
         }
 
         async function fetchStats() {
-            const resp = await fetch(`${API_BASE}/api/admin/stats`, { credentials: 'include' });
-            const d = await resp.json();
-            document.getElementById('stat-total').textContent = d.total;
-            document.getElementById('stat-active').textContent = d.active;
-            document.getElementById('stat-inactive').textContent = d.inactive;
+            try {
+                const resp = await fetch(`${API_BASE}/api/admin/stats`, { credentials: 'include' });
+                if (!resp.ok) throw new Error(`HTTP error ${resp.status}`);
+                const d = await resp.json();
+                document.getElementById('stat-total').textContent = d.total ?? 0;
+                document.getElementById('stat-active').textContent = d.active ?? 0;
+                document.getElementById('stat-inactive').textContent = d.inactive ?? 0;
+            } catch (err) {
+                console.error('[STATS FETCH ERROR]', err);
+                document.getElementById('stat-total').textContent = 'Error';
+                document.getElementById('stat-active').textContent = 'Error';
+                document.getElementById('stat-inactive').textContent = 'Error';
+            }
         }
 
         async function fetchUsers() {
             document.getElementById('loading').style.display = 'block';
-            const getVal = (id) => document.getElementById(id)?.value || '';
-            const params = new URLSearchParams({
-                firstName: getVal('f-fname'),
-                lastName: getVal('f-lname'),
-                corporation: getVal('f-corp'),
-                shopCity: getVal('f-city'),
-                shopState: getVal('f-state'),
-                userName: getVal('f-user'),
-                shopEmail: getVal('f-shopemail'),
-                userEmail: getVal('f-useremail'),
-                phone: getVal('f-phone'),
-                shopId: getVal('f-shopid'),
-                product: getVal('f-product'),
-                plan: getVal('f-plan'),
-                status: getVal('f-status')
-            });
-            const resp = await fetch(`${API_BASE}/api/admin/registrations?${params}`, { credentials: 'include' });
-            allUsers = await resp.json();
-            renderTable();
-            document.getElementById('loading').style.display = 'none';
+            try {
+                const getVal = (id) => document.getElementById(id)?.value || '';
+                const params = new URLSearchParams({
+                    firstName: getVal('f-fname'),
+                    lastName: getVal('f-lname'),
+                    corporation: getVal('f-corp'),
+                    shopCity: getVal('f-city'),
+                    shopState: getVal('f-state'),
+                    userName: getVal('f-user'),
+                    shopEmail: getVal('f-shopemail'),
+                    userEmail: getVal('f-useremail'),
+                    phone: getVal('f-phone'),
+                    shopId: getVal('f-shopid'),
+                    product: getVal('f-product'),
+                    plan: getVal('f-plan'),
+                    status: getVal('f-status')
+                });
+                const resp = await fetch(`${API_BASE}/api/admin/registrations?${params}`, { credentials: 'include' });
+                if (!resp.ok) throw new Error(`HTTP error ${resp.status}`);
+                const data = await resp.json();
+                if (Array.isArray(data)) {
+                    allUsers = data;
+                } else {
+                    console.error('[USERS FETCH ERROR] Received invalid data format:', data);
+                    allUsers = [];
+                }
+                renderTable();
+            } catch (err) {
+                console.error('[USERS FETCH ERROR]', err);
+                allUsers = [];
+                renderTable();
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
         }
 
         function renderTable() {

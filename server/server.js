@@ -195,6 +195,7 @@ async function createMssqlTables() {
               account_name NVARCHAR(255),
               card_no NVARCHAR(255),
               status NVARCHAR(255) DEFAULT 'pending',
+              is_active INT DEFAULT 1,
               expiry_date NVARCHAR(255),
               submitted_at DATETIME DEFAULT GETDATE()
           )`,
@@ -402,6 +403,7 @@ async function createMssqlTables() {
                 account_name NVARCHAR(255),
                 card_no NVARCHAR(255),
                 status NVARCHAR(255) DEFAULT 'pending',
+                is_active INT DEFAULT 1,
                 expiry_date NVARCHAR(255),
                 submitted_at DATETIME DEFAULT GETDATE()
             )
@@ -425,6 +427,16 @@ async function createMssqlTables() {
         stateQueries.push(mssqlPool.request().query(stateTicketSchema).catch(e => {}));
     }
     await Promise.all(stateQueries);
+
+    // Perform migrations on MS SQL to ensure existing tables have is_active
+    try {
+        await mssqlPool.request().query("ALTER TABLE registrations ADD is_active INT DEFAULT 1");
+    } catch (e) {}
+    for (const st of STATES) {
+        try {
+            await mssqlPool.request().query(`ALTER TABLE registrations_${st} ADD is_active INT DEFAULT 1`);
+        } catch (e) {}
+    }
 }
 
 async function syncLegacyCsharpData() {
@@ -704,6 +716,7 @@ async function initLocalDb() {
       card_no         TEXT,
       status          TEXT    DEFAULT 'pending',
       expiry_date     TEXT,
+      is_active       INTEGER DEFAULT 1,
       submitted_at    DATETIME DEFAULT CURRENT_TIMESTAMP
   `;
 
@@ -997,7 +1010,8 @@ async function initLocalDb() {
             const requiredCols = [
                 ['bank_name', 'TEXT'], ['routing_no', 'TEXT'], ['account_no', 'TEXT'], 
                 ['account_type', 'TEXT'], ['account_name', 'TEXT'], ['shop_id', 'TEXT'],
-                ['card_no', 'TEXT'], ['passcode', 'TEXT'], ['expiry_date', 'TEXT']
+                ['card_no', 'TEXT'], ['passcode', 'TEXT'], ['expiry_date', 'TEXT'],
+                ['is_active', 'INTEGER DEFAULT 1']
             ];
             
             requiredCols.forEach(([col, type]) => {

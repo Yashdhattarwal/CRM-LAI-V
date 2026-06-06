@@ -1227,6 +1227,43 @@ function dbRun(sqlStr, params = []) {
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
+app.get('/api/diagnostics', async (req, res) => {
+  const diag = {
+    timestamp: new Date().toISOString(),
+    sqliteConnected: !!db,
+    sqliteStats: {},
+    mssqlConnected: !!mssqlPool,
+    mssqlConfigServer: mssqlConfig.server,
+    mssqlError: null,
+    mssqlPing: null
+  };
+
+  if (db) {
+    try {
+      diag.sqliteStats.users = (dbGet('SELECT COUNT(*) as c FROM users') || {}).c || 0;
+      diag.sqliteStats.registrations = (dbGet('SELECT COUNT(*) as c FROM registrations') || {}).c || 0;
+      diag.sqliteStats.leads = (dbGet('SELECT COUNT(*) as c FROM leads') || {}).c || 0;
+      diag.sqliteStats.lead_sources = (dbGet('SELECT COUNT(*) as c FROM lead_sources') || {}).c || 0;
+    } catch (e) {
+      diag.sqliteStats.error = e.message;
+    }
+  }
+
+  try {
+    if (mssqlPool) {
+      const result = await mssqlPool.request().query('SELECT 1 as ping');
+      diag.mssqlPing = result.recordset[0]?.ping === 1 ? 'OK' : 'FAILED';
+    } else {
+      diag.mssqlPing = 'NOT_CONNECTED';
+    }
+  } catch (e) {
+    diag.mssqlError = e.message;
+    diag.mssqlPing = 'ERROR';
+  }
+
+  res.json(diag);
+});
+
 // ─── PaymentsVault Gateway Config ─────────────────────────────────────────────
 const VAULT_CONFIG = {
   baseUrl: "https://rtnpaymentvault.azurewebsites.net",

@@ -44,17 +44,87 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({ origin: true, credentials: true }));
+// ─── SQLite-backed Session Store (survives Render restarts/redeploys) ─────────
+// Uses the same sql.js DB that persists to lai5.db on disk.
+// Methods check `db` lazily so they work even before initLocalDb() completes.
+class SQLiteSessionStore extends session.Store {
+  _init() {
+    if (!db) return false;
+    try {
+      db.run(`CREATE TABLE IF NOT EXISTS sessions (
+        sid     TEXT PRIMARY KEY,
+        sess    TEXT NOT NULL,
+        expired INTEGER NOT NULL
+      )`);
+      return true;
+    } catch (e) {
+      console.error('[SESSION STORE] Table init error:', e.message);
+      return false;
+    }
+  }
+
+  get(sid, cb) {
+    if (!db || !this._init()) return cb(null, null);
+    try {
+      const row = dbGet('SELECT sess, expired FROM sessions WHERE sid = ?', [sid]);
+      if (!row || Date.now() > Number(row.expired)) return cb(null, null);
+      cb(null, JSON.parse(row.sess));
+    } catch (e) { cb(e); }
+  }
+
+  set(sid, sess, cb) {
+    if (!db || !this._init()) return cb(null);
+    try {
+      const maxAge = (sess.cookie && sess.cookie.maxAge) ? sess.cookie.maxAge : 86400000;
+      const expired = Date.now() + maxAge;
+      db.run(
+        'INSERT OR REPLACE INTO sessions (sid, sess, expired) VALUES (?, ?, ?)',
+        [sid, JSON.stringify(sess), expired]
+      );
+      saveDb();
+      if (cb) cb(null);
+    } catch (e) { if (cb) cb(e); }
+  }
+
+  destroy(sid, cb) {
+    if (!db) return cb && cb(null);
+    try {
+      db.run('DELETE FROM sessions WHERE sid = ?', [sid]);
+      saveDb();
+      if (cb) cb(null);
+    } catch (e) { if (cb) cb(e); }
+  }
+
+  touch(sid, sess, cb) {
+    this.set(sid, sess, cb || (() => {}));
+  }
+
+  cleanup() {
+    if (!db) return;
+    try {
+      db.run('DELETE FROM sessions WHERE expired < ?', [Date.now()]);
+      saveDb();
+    } catch (e) {}
+  }
+}
+
+const sqliteSessionStore = new SQLiteSessionStore();
+// Purge expired sessions every hour
+setInterval(() => sqliteSessionStore.cleanup(), 60 * 60 * 1000);
+
 app.use(session({
+  store: sqliteSessionStore,
   secret: 'lai5-super-secret-2025',
-  resave: true,
-  saveUninitialized: true,
-  cookie: { 
-    maxAge: 24 * 60 * 60 * 1000, 
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days – survives weekend downtime
     httpOnly: true,
-    secure: false, // Set to false to allow Localtunnel/HTTP mapping
+    secure: false,
     sameSite: 'lax'
   }
 }));
+
 
 // ─── Database helpers ─────────────────────────────────────────────────────────
 const sql = require('mssql');

@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="loading-overlay" id="loading">Loading...</div>
+    <div class="loading-overlay" id="loading" style="display:none;">⟳ Loading...</div>
     <div class="dashboard-container">
         <header class="dashboard-header">
             <div class="header-title">
@@ -18,7 +18,7 @@
             </div>
             <div style="display:flex; align-items:center; gap:2rem;">
                 <div style="text-align: right; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 2rem;">
-                    <div style="color: #8B5CF6; font-weight: 700;" id="display-fullname">Loading...</div>
+                    <div style="color: #8B5CF6; font-weight: 700;" id="display-fullname">—</div>
                     <div style="font-size:0.8rem; opacity:0.6;"><span id="display-username"></span> • <span id="display-email"></span></div>
                 </div>
                 <div class="dropdown-settings" style="position: relative;">

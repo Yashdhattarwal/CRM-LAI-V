@@ -1959,8 +1959,11 @@ app.post('/api/logout', (req, res) => {
 
 
 function adminOnly(req, res, next) {
+  if (req.session && req.session.role) {
+    req.session.role = String(req.session.role).trim();
+  }
   // Legacy support: if isAdmin is true but role is missing, treat as admin
-  if (req.session.isAdmin) {
+  if (req.session && req.session.isAdmin) {
     if (!req.session.role) req.session.role = 'admin'; 
     if (['admin', 'manager', 'employee'].includes(req.session.role)) {
       return next();
@@ -1968,6 +1971,7 @@ function adminOnly(req, res, next) {
   }
   res.status(403).json({ error: 'Unauthorized. Admin login required.' });
 }
+
 
 // POST /api/admin/login (MS SQL primary → SQLite fallback)
 app.post('/api/admin/login', async (req, res) => {
@@ -2021,12 +2025,13 @@ app.post('/api/admin/login', async (req, res) => {
     req.session.isAdmin  = true;
     req.session.userId   = user.id;
     req.session.username = user.username;
-    req.session.role     = user.role;
+    const cleanedRole = user.role ? String(user.role).trim() : 'admin';
+    req.session.role     = cleanedRole;
     req.session.email    = user.email;
     req.session.name     = `${user.first_name} ${user.last_name}`;
 
-    console.log(`[ADMIN LOGIN ✅] ${user.username} as ${user.role}`);
-    return res.json({ success: true, message: 'Welcome to Admin Portal', role: user.role });
+    console.log(`[ADMIN LOGIN ✅] ${user.username} as ${cleanedRole}`);
+    return res.json({ success: true, message: 'Welcome to Admin Portal', role: cleanedRole });
 
   } catch (err) {
     console.error('[ADMIN LOGIN ERROR]', err);
@@ -2985,6 +2990,13 @@ app.delete("/api/admin/registrations/status-log/:logId", adminOnly, (req, res) =
 // ─── Lead Management REST APIs ──────────────────────────────────────────────────
 
 function leadsAuth(req, res, next) {
+  if (req.session && req.session.role) {
+    req.session.role = String(req.session.role).trim();
+  }
+  if (req.session && req.session.isAdmin && !req.session.role) {
+    req.session.role = 'admin';
+  }
+
   // Allow authenticated staff members (admin, manager, employee)
   if (req.session && req.session.isAdmin && ['admin', 'manager', 'employee'].includes(req.session.role)) {
     return next();
